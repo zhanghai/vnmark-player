@@ -1,14 +1,14 @@
-import {VnmarkProperty} from './VnmarkElementProperties';
-import {VnmarkEngine, VnmarkEngineError} from './VnmarkEngine';
+import {Property} from './ElementProperties';
+import {Engine, EngineError} from './Engine';
 
-export interface VnmarkCommand {
+export interface Command {
   name: string;
   argumentCount: number;
 
-  execute(engine: VnmarkEngine, arguments_: string[]): Promise<boolean>;
+  execute(engine: Engine, arguments_: string[]): Promise<boolean>;
 }
 
-const VNMARK_COMMAND_ARRAY: VnmarkCommand[] = [
+const COMMAND_ARRAY: Command[] = [
   {
     name: 'eval',
     argumentCount: 1,
@@ -42,7 +42,7 @@ const VNMARK_COMMAND_ARRAY: VnmarkCommand[] = [
       const [labelName] = arguments_;
       const labelIndex = engine.document.labelIndices.get(labelName);
       if (labelIndex === undefined) {
-        throw new VnmarkEngineError(`Unknown label "${labelName}"`);
+        throw new EngineError(`Unknown label "${labelName}"`);
       }
       engine.updateState(it => it.nextLineIndex = labelIndex);
       return false;
@@ -55,7 +55,7 @@ const VNMARK_COMMAND_ARRAY: VnmarkCommand[] = [
       const [labelName, condition] = arguments_;
       const labelIndex = engine.document.labelIndices.get(labelName);
       if (labelIndex === undefined) {
-        throw new VnmarkEngineError(`Unknown label "${labelName}"`);
+        throw new EngineError(`Unknown label "${labelName}"`);
       }
       const conditionValue = engine.evaluateScript(condition);
       if (conditionValue) {
@@ -88,7 +88,7 @@ const VNMARK_COMMAND_ARRAY: VnmarkCommand[] = [
       validateName(elementName);
       validateName(propertyName);
       const {type, index, name, value} =
-        VnmarkProperty.parse(elementName, propertyName, propertyValue);
+        Property.parse(elementName, propertyName, propertyValue);
       const canonicalElementName = index ? `${type}${index}` : type;
       engine.updateState(it => {
         const element = it.elements[canonicalElementName];
@@ -122,10 +122,10 @@ const VNMARK_COMMAND_ARRAY: VnmarkCommand[] = [
       const [durationMillisString] = arguments_;
       const durationMillis = Number(durationMillisString);
       if (Number.isNaN(durationMillis)) {
-        throw new VnmarkEngineError(`Cannot parse duration millis "${durationMillisString}"`);
+        throw new EngineError(`Cannot parse duration millis "${durationMillisString}"`);
       }
       if (!Number.isInteger(durationMillis) || durationMillis < 0) {
-        throw new VnmarkEngineError(
+        throw new EngineError(
           `Duration millis ${durationMillis} is not a non-negative integer`
         );
       }
@@ -138,7 +138,7 @@ const VNMARK_COMMAND_ARRAY: VnmarkCommand[] = [
     async execute(engine, arguments_) {
       const [elementProperties] = arguments_;
       if (!elementProperties) {
-        throw new VnmarkEngineError(`Empty element properties to snap`);
+        throw new EngineError(`Empty element properties to snap`);
       }
       return await engine.updateView({type: 'snap', elementProperties});
     },
@@ -149,7 +149,7 @@ const VNMARK_COMMAND_ARRAY: VnmarkCommand[] = [
     async execute(engine, arguments_) {
       const [elementProperties] = arguments_;
       if (!elementProperties) {
-        throw new VnmarkEngineError(`Empty element properties to snap`);
+        throw new EngineError(`Empty element properties to snap`);
       }
       return await engine.updateView({type: 'wait', elementProperties});
     },
@@ -158,9 +158,8 @@ const VNMARK_COMMAND_ARRAY: VnmarkCommand[] = [
 
 function validateName(name: string) {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-    throw new VnmarkEngineError(`Invalid name "${name}"`);
+    throw new EngineError(`Invalid name "${name}"`);
   }
 }
 
-export const VNMARK_COMMANDS: Map<string, VnmarkCommand> =
-  new Map(VNMARK_COMMAND_ARRAY.map(it => [it.name, it]));
+export const COMMANDS: Map<string, Command> = new Map(COMMAND_ARRAY.map(it => [it.name, it]));

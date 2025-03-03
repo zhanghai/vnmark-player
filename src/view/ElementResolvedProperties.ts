@@ -1,33 +1,29 @@
 import {
-  VnmarkAngle,
-  VnmarkBaseElementProperties,
-  VnmarkImageElementProperties,
-  VnmarkLength,
-  VnmarkNone,
-  VnmarkNumber,
-  VnmarkPercentage,
-  VnmarkPropertyValue,
-  VnmarkString,
-  VnmarkTime,
-  VnmarkZero
-} from '../vnmark-engine';
-import {VnmarkViewError} from './VnmarkView';
+  AngleValue,
+  BaseElementProperties,
+  ImageElementProperties,
+  LengthValue,
+  NoneValue,
+  NumberValue,
+  PercentageValue,
+  PropertyValue,
+  StringValue,
+  TimeValue,
+  ZeroValue,
+} from '../engine';
+import {ViewError} from './View';
 
-export function resolveVnmarkElementValue(
-  properties: VnmarkBaseElementProperties,
-): string | undefined {
+export function resolveElementValue(properties: BaseElementProperties): string | undefined {
   const value =
-    resolvePropertyValue(properties.value, it => VnmarkNone.resolve(it) ??
-      VnmarkString.resolve(it));
-  if (value === VnmarkNone.VALUE) {
+    resolvePropertyValue(properties.value, it => NoneValue.resolve(it) ??
+      StringValue.resolve(it));
+  if (value === NoneValue.VALUE) {
     return undefined;
   }
   return value;
 }
 
-export function resolveVnmarkElementTransitionDuration(
-  properties: VnmarkBaseElementProperties,
-): number {
+export function resolveElementTransitionDuration(properties: BaseElementProperties): number {
   let defaultTransitionDuration: number;
   switch (properties.type) {
     case 'background':
@@ -60,15 +56,15 @@ export function resolveVnmarkElementTransitionDuration(
       defaultTransitionDuration = 1000;
       break;
     default:
-      throw new VnmarkViewError(`Unexpected element type "${properties.type}"`);
+      throw new ViewError(`Unexpected element type "${properties.type}"`);
   }
   return resolvePropertyValue(
     properties.transitionDuration,
-    it => VnmarkZero.resolve(it) ?? VnmarkTime.resolve(it)
+    it => ZeroValue.resolve(it) ?? TimeValue.resolve(it),
   ) ?? defaultTransitionDuration;
 }
 
-export interface VnmarkImageElementResolvedProperties {
+export interface ImageElementResolvedProperties {
   readonly value: number;
   readonly anchorX: number;
   readonly anchorY: number;
@@ -86,7 +82,7 @@ export interface VnmarkImageElementResolvedProperties {
   readonly alpha: number;
 }
 
-export namespace VnmarkImageElementResolvedProperties {
+export namespace ImageElementResolvedProperties {
   export interface ResolveOptions {
     currentValue: string | undefined;
     density: number;
@@ -99,27 +95,27 @@ export namespace VnmarkImageElementResolvedProperties {
   }
 
   export function resolve(
-    properties: VnmarkImageElementProperties,
+    properties: ImageElementProperties,
     options: ResolveOptions,
-  ): VnmarkImageElementResolvedProperties {
-    const value = resolveVnmarkElementValue(properties) === options.currentValue ? 1 : 0;
+  ): ImageElementResolvedProperties {
+    const value = resolveElementValue(properties) === options.currentValue ? 1 : 0;
     const anchorX =
       resolvePropertyValue(
         properties.anchorX,
-        it => VnmarkZero.resolve(it) ?? VnmarkLength.resolve(it, options.density) ??
-          VnmarkPercentage.resolve(it, options.imageWidth)
+        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+          PercentageValue.resolve(it, options.imageWidth),
       ) ?? (properties.type === 'figure' ? options.imageWidth / 2 : 0);
     const anchorY =
       resolvePropertyValue(
         properties.anchorY,
-        it => VnmarkZero.resolve(it) ?? VnmarkLength.resolve(it, options.density) ??
-          VnmarkPercentage.resolve(it, options.imageHeight)
+        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+          PercentageValue.resolve(it, options.imageHeight),
       ) ?? (properties.type === 'figure' ? options.imageHeight : 0);
     const positionX =
       resolvePropertyValue(
         properties.positionX,
-        it => VnmarkZero.resolve(it) ?? VnmarkLength.resolve(it, options.density) ??
-          VnmarkPercentage.resolve(it, options.screenWidth)
+        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+          PercentageValue.resolve(it, options.screenWidth),
       ) ?? (
         properties.type === 'figure' ?
           options.figureIndex / (options.figureCount + 1) * options.screenWidth : 0
@@ -127,58 +123,64 @@ export namespace VnmarkImageElementResolvedProperties {
     const positionY =
       resolvePropertyValue(
         properties.positionY,
-        it => VnmarkZero.resolve(it) ?? VnmarkLength.resolve(it, options.density) ??
-          VnmarkPercentage.resolve(it, options.screenHeight)
+        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+          PercentageValue.resolve(it, options.screenHeight),
       ) ?? (properties.type === 'figure' ? options.screenHeight : 0);
     const offsetX =
       resolvePropertyValue(
         properties.offsetX,
-        it => VnmarkZero.resolve(it) ?? VnmarkLength.resolve(it, options.density) ??
-          VnmarkPercentage.resolve(it, options.screenWidth)
+        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+          PercentageValue.resolve(it, options.screenWidth),
       ) ?? (properties.type === 'figure' ? options.screenWidth : 0);
     const offsetY =
       resolvePropertyValue(
         properties.offsetY,
-        it => VnmarkZero.resolve(it) ?? VnmarkLength.resolve(it, options.density) ??
-          VnmarkPercentage.resolve(it, options.screenHeight)
+        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+          PercentageValue.resolve(it, options.screenHeight),
       ) ?? (properties.type === 'figure' ? options.screenHeight : 0);
     const pivotX =
       resolvePropertyValue(
         properties.pivotX,
-        it => VnmarkZero.resolve(it) ?? VnmarkLength.resolve(it, options.density) ??
-          VnmarkPercentage.resolve(it, options.imageWidth)
+        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+          PercentageValue.resolve(it, options.imageWidth),
       ) ?? (options.imageWidth / 2);
     const pivotY =
       resolvePropertyValue(
         properties.pivotY,
-        it => VnmarkZero.resolve(it) ?? VnmarkLength.resolve(it, options.density) ??
-          VnmarkPercentage.resolve(it, options.imageHeight)
+        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+          PercentageValue.resolve(it, options.imageHeight),
       ) ?? (options.imageHeight / 2);
     const scaleX =
       resolvePropertyValue(
         properties.scaleX,
-        it => VnmarkNumber.resolve(it) ?? VnmarkPercentage.resolve(it, 1)
+        it => NumberValue.resolve(it) ?? PercentageValue.resolve(it, 1),
       ) ?? 1;
     const scaleY =
       resolvePropertyValue(
         properties.scaleY,
-        it => VnmarkNumber.resolve(it) ?? VnmarkPercentage.resolve(it, 1)
+        it => NumberValue.resolve(it) ?? PercentageValue.resolve(it, 1),
       ) ?? 1;
     const skewX =
-      resolvePropertyValue(properties.skewX, it => VnmarkZero.resolve(it) ?? VnmarkAngle.resolve(it)) ??
+      resolvePropertyValue(
+        properties.skewX,
+        it => ZeroValue.resolve(it) ?? AngleValue.resolve(it),
+      ) ??
       0;
     const skewY =
-      resolvePropertyValue(properties.skewY, it => VnmarkZero.resolve(it) ?? VnmarkAngle.resolve(it)) ??
+      resolvePropertyValue(
+        properties.skewY,
+        it => ZeroValue.resolve(it) ?? AngleValue.resolve(it),
+      ) ??
       0;
     const rotation =
       resolvePropertyValue(
         properties.rotation,
-        it => VnmarkZero.resolve(it) ?? VnmarkAngle.resolve(it)
+        it => ZeroValue.resolve(it) ?? AngleValue.resolve(it),
       ) ?? 0;
     const alpha =
       resolvePropertyValue(
         properties.alpha,
-        it => VnmarkNumber.resolve(it) ?? VnmarkPercentage.resolve(it, 1)
+        it => NumberValue.resolve(it) ?? PercentageValue.resolve(it, 1),
       ) ?? 1;
     return {
       value,
@@ -200,7 +202,7 @@ export namespace VnmarkImageElementResolvedProperties {
   }
 }
 
-function resolvePropertyValue<T extends VnmarkPropertyValue, R>(
+function resolvePropertyValue<T extends PropertyValue, R>(
   value: T | undefined,
   resolve: (value: T) => R,
 ): R | undefined {
@@ -209,7 +211,7 @@ function resolvePropertyValue<T extends VnmarkPropertyValue, R>(
   }
   const resolvedValue = resolve(value);
   if (resolvedValue === undefined) {
-    throw new VnmarkViewError(`Unable to resolve value ${value}`);
+    throw new ViewError(`Unable to resolve value ${value}`);
   }
   return resolvedValue;
 }

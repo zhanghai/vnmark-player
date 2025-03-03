@@ -2,23 +2,19 @@ import {getQuickJS} from 'quickjs-emscripten';
 import {useRef} from 'react';
 
 import './App.css';
-import {VnmarkEngine} from './vnmark-engine';
-import {ZipVnmarkPackage} from './vnmark-package';
-import {VnmarkViewController} from './vnmark-view';
+import {Engine} from './engine';
+import {ZipPackage} from './package';
+import {View} from './view';
 
 function App() {
   const viewRef = useRef<HTMLDivElement>(null);
 
   const loadVnmZip = async (file: File) => {
-    const package_ = await ZipVnmarkPackage.read(file);
+    const package_ = await ZipPackage.read(file);
     const quickJs = await getQuickJS();
-    const viewController = new VnmarkViewController();
-    await viewController.mount(viewRef.current!, package_.manifest);
-    const engine = new VnmarkEngine(
-      package_,
-      quickJs,
-      (engine, options) => viewController.update(engine, options)
-    );
+    const engine = new Engine(package_, quickJs);
+    const view = new View(viewRef.current!, engine);
+    await view.init();
     await engine.execute();
   };
 

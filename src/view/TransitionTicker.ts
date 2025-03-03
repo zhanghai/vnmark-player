@@ -1,15 +1,15 @@
 import {Ticker} from 'pixi.js';
 import {Transition} from '../transition';
 
-export class VnmarkTicker {
+export class TransitionTicker {
   private time = 0;
 
   private transitions = new Set<Transition<unknown>>();
 
   private callback = () => {
     this.time += this.ticker.deltaMS;
-    this.transitions.forEach(it => it.update(this.time))
-  }
+    this.transitions.forEach(it => it.update(this.time));
+  };
 
   constructor(private ticker: Ticker) {
     ticker.add(this.callback);
@@ -30,4 +30,4 @@ export class VnmarkTicker {
   }
 }
 
-export const VnmarkSharedTicker = new VnmarkTicker(Ticker.shared);
+export const SharedTransitionTicker = new TransitionTicker(Ticker.shared);

@@ -1,41 +1,36 @@
 import {BlobReader, Entry, ZipReader} from '@zip.js/zip.js';
 
-import {VnmarkPackage} from './VnmarkPackage';
-import {VNMARK_MANIFEST_FILE, VnmarkManifest, VnmarkManifestError} from './VnmarkManifest';
+import {Manifest, MANIFEST_FILE} from './Manifest';
+import {Package, PackageError} from './Package';
 
-export class ZipVnmarkPackageError extends Error {
-  constructor(message?: string, options?: ErrorOptions) {
-    super(message, options);
-  }
-}
-
-export class ZipVnmarkPackage implements VnmarkPackage {
+export class ZipPackage extends Package {
   readonly files: string[];
 
   private constructor(
     readonly blob: Blob,
-    readonly manifest: VnmarkManifest,
+    readonly manifest: Manifest,
     readonly entries: Map<string, Entry>,
     readonly directories: Map<string, string[]>,
   ) {
+    super();
     this.files = Array.from(entries.keys());
   }
 
-  static async read(blob: Blob): Promise<ZipVnmarkPackage> {
+  static async read(blob: Blob): Promise<ZipPackage> {
     const zipReader = new ZipReader(new BlobReader(blob));
     const entries = await zipReader.getEntries();
     for (const entry of entries) {
       if (entry.directory) {
-        throw new ZipVnmarkPackageError(`Unsupported directory entry "${entry.filename}"`);
+        throw new PackageError(`Unsupported directory entry "${entry.filename}"`);
       }
       if (entry.compressionMethod !== 0) {
-        throw new ZipVnmarkPackageError(`Unsupported compressed entry "${entry.filename}"`);
+        throw new PackageError(`Unsupported compressed entry "${entry.filename}"`);
       }
       if (entry.encrypted) {
-        throw new ZipVnmarkPackageError(`Unsupported encrypted entry "${entry.filename}"`);
+        throw new PackageError(`Unsupported encrypted entry "${entry.filename}"`);
       }
       if (entry.rawExtraField.length !== 0) {
-        throw new ZipVnmarkPackageError(`Unsupported entry with extra field "${entry.filename}"`);
+        throw new PackageError(`Unsupported entry with extra field "${entry.filename}"`);
       }
     }
     const fileToEntries = new Map<string, Entry>();
@@ -43,17 +38,17 @@ export class ZipVnmarkPackage implements VnmarkPackage {
     for (const entry of entries) {
       const names = entry.filename.split('/').filter(it => it && it !== '.');
       if (names.includes('..')) {
-        throw new ZipVnmarkPackageError(`Invalid entry file name ${entry.filename}`);
+        throw new PackageError(`Invalid entry file name ${entry.filename}`);
       }
       const file = names.join('/');
       if (fileToEntries.has(file)) {
-        throw new ZipVnmarkPackageError(`Duplicate entry "${entry.filename}"`);
+        throw new PackageError(`Duplicate entry "${entry.filename}"`);
       }
       fileToEntries.set(file, entry);
       const lastIndexOfSlash = file.lastIndexOf('/');
       const parentDirectory = lastIndexOfSlash != -1 ? file.substring(0, lastIndexOfSlash) : '.';
       if (fileToEntries.has(parentDirectory)) {
-        throw new ZipVnmarkPackageError(`Conflicting entry "${entry.filename}"`);
+        throw new PackageError(`Conflicting entry "${entry.filename}"`);
       }
       let parentDirectoryChildren = directories.get(parentDirectory);
       if (!parentDirectoryChildren) {
@@ -63,21 +58,21 @@ export class ZipVnmarkPackage implements VnmarkPackage {
       parentDirectoryChildren.push(file);
     }
 
-    const manifestBlob = ZipVnmarkPackage.getBlob(blob, fileToEntries, VNMARK_MANIFEST_FILE);
+    const manifestBlob = ZipPackage.getBlobForFile(blob, fileToEntries, MANIFEST_FILE);
     if (!manifestBlob) {
-      throw new VnmarkManifestError(`Missing manifest file "${VNMARK_MANIFEST_FILE}"`);
+      throw new PackageError(`Missing manifest file "${MANIFEST_FILE}"`);
     }
     const manifestText = await manifestBlob.text();
-    const manifest = VnmarkManifest.parse(manifestText);
+    const manifest = Manifest.parse(manifestText);
 
-    return new ZipVnmarkPackage(blob, manifest, fileToEntries, directories);
+    return new ZipPackage(blob, manifest, fileToEntries, directories);
   }
 
-  getBlob(file: string): Blob | undefined {
-    return ZipVnmarkPackage.getBlob(this.blob, this.entries, file);
+  getBlobForFile(file: string): Blob | undefined {
+    return ZipPackage.getBlobForFile(this.blob, this.entries, file);
   }
 
-  static getBlob(blob: Blob, entries: Map<string, Entry>, file: string): Blob | undefined {
+  static getBlobForFile(blob: Blob, entries: Map<string, Entry>, file: string): Blob | undefined {
     const entry = entries.get(file);
     if (!entry) {
       return;

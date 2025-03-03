@@ -1,13 +1,13 @@
-export interface VnmarkPropertyValue {
+export interface PropertyValue {
   type: string;
 }
 
-export interface VnmarkInitial extends VnmarkPropertyValue {
+export interface InitialValue extends PropertyValue {
   type: 'initial';
 }
 
-export namespace VnmarkInitial {
-  export function parse(source: string): VnmarkInitial | undefined {
+export namespace InitialValue {
+  export function parse(source: string): InitialValue | undefined {
     if (source !== 'initial') {
       return undefined
     }
@@ -15,21 +15,21 @@ export namespace VnmarkInitial {
   }
 }
 
-export interface VnmarkNone extends VnmarkPropertyValue {
+export interface NoneValue extends PropertyValue {
   type: 'none';
 }
 
-export namespace VnmarkNone {
-  export function parse(source: string): VnmarkNone | undefined {
+export namespace NoneValue {
+  export function parse(source: string): NoneValue | undefined {
     if (source !== 'none') {
       return undefined
     }
     return {type: 'none'};
   }
 
-  export const VALUE = Symbol('VnmarkNone');
+  export const VALUE = Symbol('none');
 
-  export function resolve(value: VnmarkPropertyValue): typeof VALUE | undefined {
+  export function resolve(value: PropertyValue): typeof VALUE | undefined {
     if (value.type === 'none') {
       return VALUE;
     }
@@ -37,19 +37,19 @@ export namespace VnmarkNone {
   }
 }
 
-export interface VnmarkZero extends VnmarkPropertyValue {
+export interface ZeroValue extends PropertyValue {
   type: 'zero';
 }
 
-export namespace VnmarkZero {
-  export function parse(source: string): VnmarkZero | undefined {
+export namespace ZeroValue {
+  export function parse(source: string): ZeroValue | undefined {
     if (source !== '0') {
       return undefined
     }
     return {type: 'zero'};
   }
 
-  export function resolve(value: VnmarkPropertyValue): number | undefined {
+  export function resolve(value: PropertyValue): number | undefined {
     if (value.type === 'zero') {
       return 0;
     }
@@ -57,14 +57,14 @@ export namespace VnmarkZero {
   }
 }
 
-export interface VnmarkAngle extends VnmarkPropertyValue {
+export interface AngleValue extends PropertyValue {
   type: 'angle';
   value: number;
   unit: 'deg' | 'rad' | 'grad' | 'turn';
 }
 
-export namespace VnmarkAngle {
-  export function parse(source: string): VnmarkAngle | undefined {
+export namespace AngleValue {
+  export function parse(source: string): AngleValue | undefined {
     let unit: 'deg' | 'rad' | 'grad' | 'turn';
     if (source.endsWith('deg')) {
       unit = 'deg';
@@ -84,9 +84,9 @@ export namespace VnmarkAngle {
     return {type: 'angle', value, unit};
   }
 
-  export function resolve(value: VnmarkPropertyValue): number | undefined {
+  export function resolve(value: PropertyValue): number | undefined {
     if (value.type === 'angle') {
-      const angle = value as VnmarkAngle;
+      const angle = value as AngleValue;
       switch (angle.unit) {
         case "deg":
           return angle.value * Math.PI / 180;
@@ -102,13 +102,13 @@ export namespace VnmarkAngle {
   }
 }
 
-export interface VnmarkBoolean extends VnmarkPropertyValue {
+export interface BooleanValue extends PropertyValue {
   type: 'boolean';
   value: boolean;
 }
 
-export namespace VnmarkBoolean {
-  export function parse(source: string): VnmarkBoolean | undefined {
+export namespace BooleanValue {
+  export function parse(source: string): BooleanValue | undefined {
     let value: boolean;
     switch (source) {
       case 'true':
@@ -124,13 +124,13 @@ export namespace VnmarkBoolean {
   }
 }
 
-export interface VnmarkNumber extends VnmarkPropertyValue {
+export interface NumberValue extends PropertyValue {
   type: 'number';
   value: number;
 }
 
-export namespace VnmarkNumber {
-  export function parse(source: string): VnmarkNumber | undefined {
+export namespace NumberValue {
+  export function parse(source: string): NumberValue | undefined {
     const value = Number(source);
     if (Number.isNaN(value)) {
       return undefined;
@@ -138,23 +138,23 @@ export namespace VnmarkNumber {
     return {type: 'number', value};
   }
 
-  export function resolve(value: VnmarkPropertyValue): number | undefined {
+  export function resolve(value: PropertyValue): number | undefined {
     if (value.type === 'number') {
-      const number = value as VnmarkNumber;
+      const number = value as NumberValue;
       return number.value;
     }
     return undefined;
   }
 }
 
-export interface VnmarkLength extends VnmarkPropertyValue {
+export interface LengthValue extends PropertyValue {
   type: 'length';
   value: number;
   unit: 'px';
 }
 
-export namespace VnmarkLength {
-  export function parse(source: string): VnmarkLength | undefined {
+export namespace LengthValue {
+  export function parse(source: string): LengthValue | undefined {
     if (!source.endsWith('px')) {
       return undefined;
     }
@@ -165,9 +165,9 @@ export namespace VnmarkLength {
     return {type: 'length', value, unit: 'px'};
   }
 
-  export function resolve(value: VnmarkPropertyValue, density: number): number | undefined {
+  export function resolve(value: PropertyValue, density: number): number | undefined {
     if (value.type === 'length') {
-      const length = value as VnmarkLength;
+      const length = value as LengthValue;
       switch (length.unit) {
         case "px":
           return length.value * density;
@@ -177,13 +177,13 @@ export namespace VnmarkLength {
   }
 }
 
-export interface VnmarkPercentage extends VnmarkPropertyValue {
+export interface PercentageValue extends PropertyValue {
   type: 'percentage';
   value: number;
 }
 
-export namespace VnmarkPercentage {
-  export function parse(source: string): VnmarkPercentage | undefined {
+export namespace PercentageValue {
+  export function parse(source: string): PercentageValue | undefined {
     if (!source.endsWith('%')) {
       return undefined;
     }
@@ -194,22 +194,22 @@ export namespace VnmarkPercentage {
     return {type: 'percentage', value};
   }
 
-  export function resolve(value: VnmarkPropertyValue, parentValue: number): number | undefined {
+  export function resolve(value: PropertyValue, parentValue: number): number | undefined {
     if (value.type === 'percentage') {
-      const percentage = value as VnmarkPercentage;
+      const percentage = value as PercentageValue;
       return percentage.value / 100 * parentValue;
     }
     return undefined;
   }
 }
 
-export interface VnmarkString extends VnmarkPropertyValue {
+export interface StringValue extends PropertyValue {
   type: 'string';
   value: string;
 }
 
-export namespace VnmarkString {
-  export function parse(source: string): VnmarkString | undefined {
+export namespace StringValue {
+  export function parse(source: string): StringValue | undefined {
     if (!source.startsWith('\'')) {
       return {type: 'string', value: source};
     }
@@ -251,23 +251,23 @@ export namespace VnmarkString {
     return {type: 'string', value};
   }
 
-  export function resolve(value: VnmarkPropertyValue): string | undefined {
+  export function resolve(value: PropertyValue): string | undefined {
     if (value.type === 'string') {
-      const string = value as VnmarkString;
+      const string = value as StringValue;
       return string.value;
     }
     return undefined;
   }
 }
 
-export interface VnmarkTime extends VnmarkPropertyValue {
+export interface TimeValue extends PropertyValue {
   type: 'time';
   value: number;
   unit: 's' | 'ms';
 }
 
-export namespace VnmarkTime {
-  export function parse(source: string): VnmarkTime | undefined {
+export namespace TimeValue {
+  export function parse(source: string): TimeValue | undefined {
     let unit: 's' | 'ms';
     if (source.endsWith('ms')) {
       unit = 'ms';
@@ -283,9 +283,9 @@ export namespace VnmarkTime {
     return {type: 'time', value, unit};
   }
 
-  export function resolve(value: VnmarkPropertyValue): number | undefined {
+  export function resolve(value: PropertyValue): number | undefined {
     if (value.type == 'time') {
-      const time = value as VnmarkTime;
+      const time = value as TimeValue;
       switch (time.unit) {
         case 's':
           return time.value * 1000;

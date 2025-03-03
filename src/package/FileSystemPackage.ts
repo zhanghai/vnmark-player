@@ -1,22 +1,23 @@
-import {VnmarkPackage} from './VnmarkPackage';
-import {VNMARK_MANIFEST_FILE, VnmarkManifest, VnmarkManifestError} from './VnmarkManifest';
+import {MANIFEST_FILE, Manifest} from './Manifest';
+import {PackageError, Package} from './Package';
 
-export class FsVnmarkPackage implements VnmarkPackage {
+export class FileSystemPackage extends Package {
   readonly files: string[];
 
   private constructor(
-    readonly manifest: VnmarkManifest,
+    readonly manifest: Manifest,
     readonly fileObjects: Map<string, File>,
     readonly directories: Map<string, string[]>,
   ) {
+    super();
     this.files = Array.from(fileObjects.keys());
   }
 
-  getBlob(file: string): Blob | undefined {
+  getBlobForFile(file: string): Blob | undefined {
     return this.fileObjects.get(file);
   }
 
-  static async read(directoryHandle: FileSystemDirectoryHandle): Promise<FsVnmarkPackage> {
+  static async read(directoryHandle: FileSystemDirectoryHandle): Promise<FileSystemPackage> {
     const fileObjects = new Map<string, File>();
     const directories = new Map<string, string[]>();
 
@@ -39,13 +40,13 @@ export class FsVnmarkPackage implements VnmarkPackage {
 
     await readDirectory('.', directoryHandle);
 
-    const manifestFile = fileObjects.get(VNMARK_MANIFEST_FILE);
+    const manifestFile = fileObjects.get(MANIFEST_FILE);
     if (!manifestFile) {
-      throw new VnmarkManifestError(`Missing manifest file "${VNMARK_MANIFEST_FILE}"`);
+      throw new PackageError(`Missing manifest file "${MANIFEST_FILE}"`);
     }
     const manifestText = await manifestFile.text();
-    const manifest = VnmarkManifest.parse(manifestText);
+    const manifest = Manifest.parse(manifestText);
 
-    return new FsVnmarkPackage(manifest, fileObjects, directories);
+    return new FileSystemPackage(manifest, fileObjects, directories);
   }
 }

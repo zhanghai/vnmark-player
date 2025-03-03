@@ -1,8 +1,8 @@
 import {Matrix, ObservablePoint, PointData, Sprite, SpriteOptions, Texture} from 'pixi.js';
-import {VnmarkImageElementResolvedProperties} from './VnmarkElementResolvedProperties';
-import {VnmarkViewError} from './VnmarkView';
+import {ImageElementResolvedProperties} from './ElementResolvedProperties';
+import {ViewError} from './View';
 
-export class VnmarkSprite extends Sprite {
+export class ImageSprite extends Sprite {
   constructor(options?: SpriteOptions | Texture) {
     super(options);
   }
@@ -91,8 +91,8 @@ export class VnmarkSprite extends Sprite {
   }
 
   getPropertyValue(
-    propertyName: keyof VnmarkImageElementResolvedProperties,
-  ): VnmarkImageElementResolvedProperties[typeof propertyName] {
+    propertyName: keyof ImageElementResolvedProperties,
+  ): ImageElementResolvedProperties[typeof propertyName] {
     switch (propertyName) {
       case 'value':
         return this.valueAlpha;
@@ -125,13 +125,13 @@ export class VnmarkSprite extends Sprite {
       case 'alpha':
         return this.propertyAlpha;
       default:
-        throw new VnmarkViewError(`Unknown property "${propertyName}"`);
+        throw new ViewError(`Unknown property "${propertyName}"`);
     }
   }
 
   setPropertyValue(
-    propertyName: keyof VnmarkImageElementResolvedProperties,
-    propertyValue: VnmarkImageElementResolvedProperties[typeof propertyName],
+    propertyName: keyof ImageElementResolvedProperties,
+    propertyValue: ImageElementResolvedProperties[typeof propertyName],
   ) {
     switch (propertyName) {
       case 'value':
@@ -180,7 +180,7 @@ export class VnmarkSprite extends Sprite {
         this.propertyAlpha = propertyValue;
         break;
       default:
-        throw new VnmarkViewError(`Unknown property "${propertyName}"`);
+        throw new ViewError(`Unknown property "${propertyName}"`);
     }
   }
 }

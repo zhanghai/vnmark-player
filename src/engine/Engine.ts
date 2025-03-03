@@ -4,7 +4,7 @@ import * as VnmarkParser from 'vnmark-parser';
 import {
   BatchedElementsLine,
   CommandLine,
-  Document,
+  Document as ParserDocument,
   ElementLine,
   Line,
   LiteralValue,
@@ -15,11 +15,11 @@ import {
   Value,
 } from 'vnmark-parser/vnmark.d';
 
-import {VnmarkManifest, VnmarkPackage} from '../vnmark-package';
-import {VNMARK_COMMANDS} from './VnmarkCommand';
-import {VnmarkElementProperties} from './VnmarkElementProperties';
+import {Package} from '../package';
+import {COMMANDS} from './Command';
+import {ElementProperties} from './ElementProperties';
 
-export class VnmarkEngineError extends Error {
+export class EngineError extends Error {
   constructor(message?: string, options?: ErrorOptions) {
     super(message, options);
   }
@@ -36,16 +36,16 @@ const METADATA_DEFAULTS = {
   ]
 }
 
-export class VnmarkDocument {
+export class Document {
   private constructor(
-    readonly document: Document,
+    readonly document: ParserDocument,
     readonly lines: Line[],
     readonly batchedElementNames: Name[],
     readonly blankLineLines: Line[],
     readonly labelIndices: Map<string, number>,
   ) {}
 
-  static parse(source: string): VnmarkDocument {
+  static parse(source: string): Document {
     const document = VnmarkParser.parse(source, {grammarSource: source});
 
     const lines = document.body?.lines ?? [];
@@ -81,15 +81,15 @@ export class VnmarkDocument {
               case NodeType.QuotedValue:
                 return (it as QuotedValue).value;
               case NodeType.ScriptValue:
-                throw new VnmarkEngineError(
+                throw new EngineError(
                   `Unsupported script value in label command "${getLineSource(line)}"`
                 );
               default:
-                throw new VnmarkEngineError(`Unexpected value type "${it.type}"`);
+                throw new EngineError(`Unexpected value type "${it.type}"`);
             }
           });
           if (arguments_.length !== 1) {
-            throw new VnmarkEngineError(
+            throw new EngineError(
               `Invalid number of arguments for label command ${getLineSource(line)}, expected 1"`
             );
           }
@@ -99,52 +99,47 @@ export class VnmarkDocument {
       }
     }
 
-    return new VnmarkDocument(document, lines, batchedElementNames, blankLineLines, labelIndices);
+    return new Document(document, lines, batchedElementNames, blankLineLines, labelIndices);
   }
 }
 
-export interface VnmarkState {
+export interface State {
   readonly fileName: string;
   readonly nextLineIndex: number;
-  readonly elements: Readonly<Record<string, VnmarkElementProperties>>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly scriptStates: any;
+  readonly elements: Readonly<Record<string, ElementProperties>>;
+  readonly scriptStates: Record<string, unknown>;
 }
 
-export type VnmarkViewUpdater =
-  (engine: VnmarkEngine, options: VnmarkUpdateViewOptions) => Promise<boolean>;
+export type ViewUpdater = (options: UpdateViewOptions) => Promise<boolean>;
 
-export type VnmarkUpdateViewOptions =
-  { type: 'pause' } |
-  { type: 'sleep', durationMillis: number } |
-  { type: 'snap', elementProperties: string } |
-  { type: 'wait', elementProperties: string };
+export type UpdateViewOptions =
+  { type: 'pause' }
+  | { type: 'sleep', durationMillis: number }
+  | { type: 'snap', elementProperties: string }
+  | { type: 'wait', elementProperties: string };
 
-export class VnmarkEngine {
-  private _state!: VnmarkState;
+export class Engine {
+  public viewUpdater: ViewUpdater | undefined;
 
-  get state(): VnmarkState {
+  private _state!: State;
+
+  get state(): State {
     return this._state;
   }
 
-  private _document!: VnmarkDocument;
+  private _document!: Document;
 
-  get document(): VnmarkDocument {
+  get document(): Document {
     return this._document;
   }
 
   constructor(
-    private readonly package_: VnmarkPackage,
+    readonly package_: Package,
     private readonly quickJs: QuickJSWASMModule,
-    private readonly viewUpdater: VnmarkViewUpdater,
   ) {}
 
-  get manifest(): VnmarkManifest {
-    return this.package_.manifest;
-  }
-
-  async execute(state?: Partial<VnmarkState>) {
-    const fileName = state?.fileName ?? 'start';
+  async execute(state?: Partial<State>) {
+    const fileName = state?.fileName ?? this.package_.manifest.entrypoint;
     this._state = {
       fileName,
       nextLineIndex: 0,
@@ -167,10 +162,7 @@ export class VnmarkEngine {
         try {
           moveToNextLine = await this.executeLine(line);
         } catch (e) {
-          throw new VnmarkEngineError(
-            `Error when executing line "${getLineSource(line)}"`,
-            {cause: e}
-          );
+          throw new EngineError(`Error when executing line "${getLineSource(line)}"`, {cause: e});
         }
         if (moveToNextLine) {
           this.updateState(it => it.nextLineIndex = lineIndex + 1);
@@ -197,7 +189,7 @@ export class VnmarkEngine {
       case NodeType.CommandLine:
         return await this.executeCommandLine(line as CommandLine);
       default:
-        throw new VnmarkEngineError(`Unexpected line type "${line.type}"`);
+        throw new EngineError(`Unexpected line type "${line.type}"`);
     }
   }
 
@@ -248,7 +240,7 @@ export class VnmarkEngine {
   private async executeBatchedElementsLine(line: BatchedElementsLine): Promise<boolean> {
     const batchedElementNames = this._document.batchedElementNames;
     if (line.batchedProperties.length !== batchedElementNames.length) {
-      throw new VnmarkEngineError(
+      throw new EngineError(
         `Invalid number of elements for batched elements line, expected` +
         ` "${batchedElementNames.map(it => it.value).join(', ')}"`
       );
@@ -270,13 +262,13 @@ export class VnmarkEngine {
 
   private async executeCommandLine(line: CommandLine): Promise<boolean> {
     const commandName = line.name.value;
-    const command = VNMARK_COMMANDS.get(commandName);
+    const command = COMMANDS.get(commandName);
     if (!command) {
-      throw new VnmarkEngineError(`Unsupported command "${commandName}"`);
+      throw new EngineError(`Unsupported command "${commandName}"`);
     }
     const arguments_ = line.arguments.map(it => this.getValue(it));
     if (arguments_.length !== command.argumentCount) {
-      throw new VnmarkEngineError(`Invalid number of arguments, expected ${command.argumentCount}`);
+      throw new EngineError(`Invalid number of arguments, expected ${command.argumentCount}`);
     }
     return await command.execute(this, arguments_);
   }
@@ -290,7 +282,7 @@ export class VnmarkEngine {
       case NodeType.ScriptValue:
         return String(this.evaluateScript((value as ScriptValue).script));
       default:
-        throw new VnmarkEngineError(`Unexpected value type "${value.type}"`);
+        throw new EngineError(`Unexpected value type "${value.type}"`);
     }
   }
 
@@ -320,7 +312,7 @@ export class VnmarkEngine {
         return value;
       });
     } catch (e) {
-      throw new VnmarkEngineError(`Error when evaluating script "${script}"`, {cause: e});
+      throw new EngineError(`Error when evaluating script "${script}"`, {cause: e});
     }
   }
 
@@ -336,7 +328,7 @@ export class VnmarkEngine {
       }
     }
     if (!blob) {
-      throw new VnmarkEngineError(`Cannot find file with type "${type}" and name "${name}"`);
+      throw new EngineError(`Cannot find file with type "${type}" and name "${name}"`);
     }
     return blob;
   }
@@ -344,19 +336,19 @@ export class VnmarkEngine {
   async setDocument(name: string) {
     const blob = this.getBlob('vnmark', name);
     const source = await blob.text();
-    this._document = VnmarkDocument.parse(source);
+    this._document = Document.parse(source);
     this.updateState(it => {
       it.fileName = name;
       it.nextLineIndex = 0;
     });
   }
 
-  updateState(recipe: (draft: WritableDraft<VnmarkState>) => void) {
+  updateState(recipe: (draft: WritableDraft<State>) => void) {
     this._state = produce(this._state, it => { recipe(it); });
   }
 
-  async updateView(options: VnmarkUpdateViewOptions): Promise<boolean> {
-    const moveToNextLine = await this.viewUpdater(this, options);
+  async updateView(options: UpdateViewOptions): Promise<boolean> {
+    const moveToNextLine = await this.viewUpdater?.(options) ?? true;
     // Elements with value set to 'none' should be reset, i.e. removed. But we should do this after
     // updating view so that transition properties can still apply to a change to 'none'.
     this.updateState(it => {

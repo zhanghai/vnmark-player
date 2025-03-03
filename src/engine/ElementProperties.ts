@@ -1,93 +1,93 @@
-import {VnmarkEngineError} from './VnmarkEngine';
+import {EngineError} from './Engine';
 
 import {
-  VnmarkAngle,
-  VnmarkBoolean,
-  VnmarkInitial,
-  VnmarkLength,
-  VnmarkNone,
-  VnmarkNumber,
-  VnmarkPercentage,
-  VnmarkPropertyValue,
-  VnmarkString,
-  VnmarkTime,
-  VnmarkZero,
-} from './VnmarkPropertyValue';
+  AngleValue,
+  BooleanValue,
+  InitialValue,
+  LengthValue,
+  NoneValue,
+  NumberValue,
+  PercentageValue,
+  PropertyValue,
+  StringValue,
+  TimeValue,
+  ZeroValue,
+} from './PropertyValue';
 
-export interface VnmarkBaseElementProperties {
+export interface BaseElementProperties {
   readonly type: string;
   readonly index?: number;
-  readonly value?: VnmarkNone | VnmarkString;
-  readonly transitionDuration?: VnmarkZero | VnmarkTime;
+  readonly value?: NoneValue | StringValue;
+  readonly transitionDuration?: ZeroValue | TimeValue;
 }
 
-export interface VnmarkImageElementProperties extends VnmarkBaseElementProperties {
+export interface ImageElementProperties extends BaseElementProperties {
   readonly type: 'background' | 'foreground' | 'figure' | 'avatar';
-  readonly anchorX?: VnmarkZero | VnmarkLength | VnmarkPercentage;
-  readonly anchorY?: VnmarkZero | VnmarkLength | VnmarkPercentage;
-  readonly positionX?: VnmarkZero | VnmarkLength | VnmarkPercentage;
-  readonly positionY?: VnmarkZero | VnmarkLength | VnmarkPercentage;
-  readonly offsetX?: VnmarkZero | VnmarkLength | VnmarkPercentage;
-  readonly offsetY?: VnmarkZero | VnmarkLength | VnmarkPercentage;
-  readonly pivotX?: VnmarkZero | VnmarkLength | VnmarkPercentage;
-  readonly pivotY?: VnmarkZero | VnmarkLength | VnmarkPercentage;
-  readonly scaleX?: VnmarkNumber | VnmarkPercentage;
-  readonly scaleY?: VnmarkNumber | VnmarkPercentage;
-  readonly skewX?: VnmarkZero | VnmarkAngle;
-  readonly skewY?: VnmarkZero | VnmarkAngle;
-  readonly rotation?: VnmarkZero | VnmarkAngle;
-  readonly alpha?: VnmarkNumber | VnmarkPercentage;
+  readonly anchorX?: ZeroValue | LengthValue | PercentageValue;
+  readonly anchorY?: ZeroValue | LengthValue | PercentageValue;
+  readonly positionX?: ZeroValue | LengthValue | PercentageValue;
+  readonly positionY?: ZeroValue | LengthValue | PercentageValue;
+  readonly offsetX?: ZeroValue | LengthValue | PercentageValue;
+  readonly offsetY?: ZeroValue | LengthValue | PercentageValue;
+  readonly pivotX?: ZeroValue | LengthValue | PercentageValue;
+  readonly pivotY?: ZeroValue | LengthValue | PercentageValue;
+  readonly scaleX?: NumberValue | PercentageValue;
+  readonly scaleY?: NumberValue | PercentageValue;
+  readonly skewX?: ZeroValue | AngleValue;
+  readonly skewY?: ZeroValue | AngleValue;
+  readonly rotation?: ZeroValue | AngleValue;
+  readonly alpha?: NumberValue | PercentageValue;
 }
 
-export interface VnmarkTextElementProperties extends VnmarkBaseElementProperties {
+export interface TextElementProperties extends BaseElementProperties {
   readonly type: 'name' | 'text' | 'choice';
 }
 
-export interface VnmarkChoiceElementProperties extends VnmarkTextElementProperties {
+export interface ChoiceElementProperties extends TextElementProperties {
   readonly type: 'choice';
-  readonly enabled?: VnmarkBoolean;
-  readonly script?: VnmarkString;
+  readonly enabled?: BooleanValue;
+  readonly script?: StringValue;
 }
 
-export interface VnmarkAudioElementProperties extends VnmarkBaseElementProperties {
+export interface AudioElementProperties extends BaseElementProperties {
   readonly type: 'music' | 'sound' | 'voice';
-  readonly volume?: VnmarkNumber | VnmarkPercentage;
+  readonly volume?: NumberValue | PercentageValue;
 }
 
-export interface VnmarkVideoElementProperties extends VnmarkBaseElementProperties {
+export interface VideoElementProperties extends BaseElementProperties {
   readonly type: 'video';
 }
 
-export interface VnmarkEffectElementProperties extends VnmarkBaseElementProperties {
+export interface EffectElementProperties extends BaseElementProperties {
   readonly type: 'effect';
 }
 
-export interface VnmarkLayoutElementProperties extends VnmarkBaseElementProperties {
+export interface LayoutElementProperties extends BaseElementProperties {
   readonly type: 'layout';
 }
 
-export type VnmarkElementProperties =
-  VnmarkImageElementProperties | VnmarkTextElementProperties | VnmarkChoiceElementProperties |
-  VnmarkAudioElementProperties | VnmarkVideoElementProperties | VnmarkEffectElementProperties |
-  VnmarkLayoutElementProperties;
+export type ElementProperties =
+  ImageElementProperties | TextElementProperties | ChoiceElementProperties
+  | AudioElementProperties | VideoElementProperties | EffectElementProperties
+  | LayoutElementProperties;
 
-export type VnmarkProperty = {
-  readonly type: VnmarkElementProperties['type'];
-  readonly index?: VnmarkElementProperties['index'];
+export type Property = {
+  readonly type: ElementProperties['type'];
+  readonly index?: ElementProperties['index'];
   readonly name: string;
-  readonly value: VnmarkPropertyValue;
+  readonly value: PropertyValue;
 }
 
-export namespace VnmarkProperty {
+export namespace Property {
   export function parse(
     elementName: string,
     propertyName: string,
     propertyValue: string
-  ): VnmarkProperty {
+  ): Property {
     const elementNameMatch =
       elementName.match(/^([A-Za-z_](?:[A-Za-z0-9_]*[A-Za-z_])?)([1-9][0-9]*)?$/);
     if (!elementNameMatch) {
-      throw new VnmarkEngineError(`Unsupported element name "${elementName}"`);
+      throw new EngineError(`Unsupported element name "${elementName}"`);
     }
     const [, type, indexString] = elementNameMatch;
     let index: number | undefined;
@@ -108,16 +108,16 @@ export namespace VnmarkProperty {
         break;
       case 'layout':
         if (indexString) {
-          throw new VnmarkEngineError(
+          throw new EngineError(
             `Unsupported index ${indexString} on element type "${type}" from "${elementName}"`
           );
         }
         break;
       default:
-        throw new VnmarkEngineError(`Unsupported element type "${type}" from "${elementName}"`);
+        throw new EngineError(`Unsupported element type "${type}" from "${elementName}"`);
     }
     let name: string | undefined;
-    let value: VnmarkPropertyValue | undefined;
+    let value: PropertyValue | undefined;
     switch (propertyName) {
       case 'value':
         name = 'value';
@@ -125,7 +125,7 @@ export namespace VnmarkProperty {
           parsePropertyValue(
             propertyName,
             propertyValue,
-            it => VnmarkNone.parse(it) ?? VnmarkString.parse(it),
+            it => NoneValue.parse(it) ?? StringValue.parse(it),
           );
         break;
       case 'transition_duration':
@@ -134,7 +134,7 @@ export namespace VnmarkProperty {
           parsePropertyValue(
             propertyName,
             propertyValue,
-            it => VnmarkZero.parse(it) ?? VnmarkTime.parse(it),
+            it => ZeroValue.parse(it) ?? TimeValue.parse(it),
           );
         break;
     }
@@ -151,8 +151,8 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkZero.parse(it) ?? VnmarkLength.parse(it) ??
-                    VnmarkPercentage.parse(it),
+                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
+                    PercentageValue.parse(it),
                 );
               break;
             case 'anchor_y':
@@ -161,8 +161,8 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkZero.parse(it) ?? VnmarkLength.parse(it) ??
-                    VnmarkPercentage.parse(it),
+                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
+                    PercentageValue.parse(it),
                 );
               break;
             case 'position_x':
@@ -171,8 +171,8 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkZero.parse(it) ?? VnmarkLength.parse(it) ??
-                    VnmarkPercentage.parse(it),
+                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
+                    PercentageValue.parse(it),
                 );
               break;
             case 'position_y':
@@ -181,8 +181,8 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkZero.parse(it) ?? VnmarkLength.parse(it) ??
-                    VnmarkPercentage.parse(it),
+                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
+                    PercentageValue.parse(it),
                 );
               break;
             case 'offset_x':
@@ -191,8 +191,8 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkZero.parse(it) ?? VnmarkLength.parse(it) ??
-                    VnmarkPercentage.parse(it),
+                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
+                    PercentageValue.parse(it),
                 );
               break;
             case 'offset_y':
@@ -201,8 +201,8 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkZero.parse(it) ?? VnmarkLength.parse(it) ??
-                    VnmarkPercentage.parse(it),
+                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
+                    PercentageValue.parse(it),
                 );
               break;
             case 'pivot_x':
@@ -212,8 +212,8 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkZero.parse(it) ?? VnmarkLength.parse(it)
-                    ?? VnmarkPercentage.parse(it),
+                  it => ZeroValue.parse(it) ?? LengthValue.parse(it)
+                    ?? PercentageValue.parse(it),
                 );
               break;
             case 'pivot_y':
@@ -222,8 +222,8 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkZero.parse(it) ?? VnmarkLength.parse(it) ??
-                    VnmarkPercentage.parse(it),
+                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
+                    PercentageValue.parse(it),
                 );
               break;
             case 'scale_x':
@@ -232,7 +232,7 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkNumber.parse(it) ?? VnmarkPercentage.parse(it)
+                  it => NumberValue.parse(it) ?? PercentageValue.parse(it)
                 );
               break;
             case 'scale_y':
@@ -241,7 +241,7 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkNumber.parse(it) ?? VnmarkPercentage.parse(it)
+                  it => NumberValue.parse(it) ?? PercentageValue.parse(it)
                 );
               break;
             case 'skew_x':
@@ -250,7 +250,7 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkZero.parse(it) ?? VnmarkAngle.parse(it)
+                  it => ZeroValue.parse(it) ?? AngleValue.parse(it)
                 );
               break;
             case 'skew_y':
@@ -259,7 +259,7 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkZero.parse(it) ?? VnmarkAngle.parse(it)
+                  it => ZeroValue.parse(it) ?? AngleValue.parse(it)
                 );
               break;
             case 'rotation':
@@ -268,7 +268,7 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkZero.parse(it) ?? VnmarkAngle.parse(it)
+                  it => ZeroValue.parse(it) ?? AngleValue.parse(it)
                 );
               break;
             case 'alpha':
@@ -277,7 +277,7 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkNumber.parse(it) ?? VnmarkPercentage.parse(it)
+                  it => NumberValue.parse(it) ?? PercentageValue.parse(it)
                 );
               break;
           }
@@ -290,11 +290,11 @@ export namespace VnmarkProperty {
             case 'enabled':
               name = 'enabled';
               value =
-                parsePropertyValue(propertyName, propertyValue, it => VnmarkBoolean.parse(it));
+                parsePropertyValue(propertyName, propertyValue, it => BooleanValue.parse(it));
               break;
             case 'script':
               name = 'script';
-              value = parsePropertyValue(propertyName, propertyValue, it => VnmarkString.parse(it));
+              value = parsePropertyValue(propertyName, propertyValue, it => StringValue.parse(it));
               break;
           }
           break;
@@ -308,13 +308,13 @@ export namespace VnmarkProperty {
                 parsePropertyValue(
                   propertyName,
                   propertyValue,
-                  it => VnmarkNumber.parse(it) ?? VnmarkPercentage.parse(it)
+                  it => NumberValue.parse(it) ?? PercentageValue.parse(it)
                 );
               break;
             case 'loop':
               name = 'loop';
               value =
-                parsePropertyValue(propertyName, propertyValue, it => VnmarkBoolean.parse(it));
+                parsePropertyValue(propertyName, propertyValue, it => BooleanValue.parse(it));
               break;
           }
           break;
@@ -325,25 +325,25 @@ export namespace VnmarkProperty {
         case 'layout':
           break;
         default:
-          throw new VnmarkEngineError(`Unexpected element type "${type}"`);
+          throw new EngineError(`Unexpected element type "${type}"`);
       }
     }
     if (name === undefined || value === undefined) {
-      throw new VnmarkEngineError(
+      throw new EngineError(
         `Unexpected property name "${propertyName}" on element type "${type}"`
       );
     }
     return {type, ...(index && {index}), name, value};
   }
 
-  function parsePropertyValue<T extends VnmarkPropertyValue | undefined>(
+  function parsePropertyValue<T extends PropertyValue | undefined>(
     propertyName: string,
     propertyValue: string,
     parse: (source: string) => T,
-  ): VnmarkInitial | NonNullable<T> {
-    const value = VnmarkInitial.parse(propertyValue) ?? parse(propertyValue);
+  ): InitialValue | NonNullable<T> {
+    const value = InitialValue.parse(propertyValue) ?? parse(propertyValue);
     if (value === undefined) {
-      throw new VnmarkEngineError(
+      throw new EngineError(
         `Invalid value "${propertyValue}" for property "${propertyName}"`
       );
     }
