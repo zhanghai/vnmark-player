@@ -1,10 +1,10 @@
-import {getQuickJS} from 'quickjs-emscripten';
-import {useRef} from 'react';
+import { getQuickJS } from 'quickjs-emscripten';
+import { useRef } from 'react';
 
 import './App.css';
-import {Engine} from './engine';
-import {ZipPackage} from './package';
-import {View} from './view';
+import { Engine } from './engine';
+import { ZipPackage } from './package';
+import { View } from './view';
 
 function App() {
   const viewRef = useRef<HTMLDivElement>(null);
@@ -21,16 +21,19 @@ function App() {
   return (
     <>
       <div>
-        <input type="file" onChange={event => {
-          const file = event.target.files!.item(0);
-          if (file) {
-            loadVnmZip(file);
-          }
-        }}/>
+        <input
+          type="file"
+          onChange={event => {
+            const file = event.target.files!.item(0);
+            if (file) {
+              loadVnmZip(file);
+            }
+          }}
+        />
       </div>
-      <div ref={viewRef}/>
+      <div ref={viewRef} />
     </>
-  )
+  );
 }
 
 export default App;

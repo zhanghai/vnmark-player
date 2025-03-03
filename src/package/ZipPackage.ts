@@ -1,7 +1,7 @@
-import {BlobReader, Entry, ZipReader} from '@zip.js/zip.js';
+import { BlobReader, Entry, ZipReader } from '@zip.js/zip.js';
 
-import {Manifest, MANIFEST_FILE} from './Manifest';
-import {Package, PackageError} from './Package';
+import { Manifest, MANIFEST_FILE } from './Manifest';
+import { Package, PackageError } from './Package';
 
 export class ZipPackage extends Package {
   readonly files: string[];
@@ -21,16 +21,24 @@ export class ZipPackage extends Package {
     const entries = await zipReader.getEntries();
     for (const entry of entries) {
       if (entry.directory) {
-        throw new PackageError(`Unsupported directory entry "${entry.filename}"`);
+        throw new PackageError(
+          `Unsupported directory entry "${entry.filename}"`,
+        );
       }
       if (entry.compressionMethod !== 0) {
-        throw new PackageError(`Unsupported compressed entry "${entry.filename}"`);
+        throw new PackageError(
+          `Unsupported compressed entry "${entry.filename}"`,
+        );
       }
       if (entry.encrypted) {
-        throw new PackageError(`Unsupported encrypted entry "${entry.filename}"`);
+        throw new PackageError(
+          `Unsupported encrypted entry "${entry.filename}"`,
+        );
       }
       if (entry.rawExtraField.length !== 0) {
-        throw new PackageError(`Unsupported entry with extra field "${entry.filename}"`);
+        throw new PackageError(
+          `Unsupported entry with extra field "${entry.filename}"`,
+        );
       }
     }
     const fileToEntries = new Map<string, Entry>();
@@ -46,7 +54,8 @@ export class ZipPackage extends Package {
       }
       fileToEntries.set(file, entry);
       const lastIndexOfSlash = file.lastIndexOf('/');
-      const parentDirectory = lastIndexOfSlash != -1 ? file.substring(0, lastIndexOfSlash) : '.';
+      const parentDirectory =
+        lastIndexOfSlash != -1 ? file.substring(0, lastIndexOfSlash) : '.';
       if (fileToEntries.has(parentDirectory)) {
         throw new PackageError(`Conflicting entry "${entry.filename}"`);
       }
@@ -58,7 +67,11 @@ export class ZipPackage extends Package {
       parentDirectoryChildren.push(file);
     }
 
-    const manifestBlob = ZipPackage.getBlobForFile(blob, fileToEntries, MANIFEST_FILE);
+    const manifestBlob = ZipPackage.getBlobForFile(
+      blob,
+      fileToEntries,
+      MANIFEST_FILE,
+    );
     if (!manifestBlob) {
       throw new PackageError(`Missing manifest file "${MANIFEST_FILE}"`);
     }
@@ -72,7 +85,11 @@ export class ZipPackage extends Package {
     return ZipPackage.getBlobForFile(this.blob, this.entries, file);
   }
 
-  static getBlobForFile(blob: Blob, entries: Map<string, Entry>, file: string): Blob | undefined {
+  static getBlobForFile(
+    blob: Blob,
+    entries: Map<string, Entry>,
+    file: string,
+  ): Blob | undefined {
     const entry = entries.get(file);
     if (!entry) {
       return;

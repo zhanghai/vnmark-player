@@ -1,5 +1,5 @@
-import {MANIFEST_FILE, Manifest} from './Manifest';
-import {PackageError, Package} from './Package';
+import { MANIFEST_FILE, Manifest } from './Manifest';
+import { PackageError, Package } from './Package';
 
 export class FileSystemPackage extends Package {
   readonly files: string[];
@@ -17,22 +17,31 @@ export class FileSystemPackage extends Package {
     return this.fileObjects.get(file);
   }
 
-  static async read(directoryHandle: FileSystemDirectoryHandle): Promise<FileSystemPackage> {
+  static async read(
+    directoryHandle: FileSystemDirectoryHandle,
+  ): Promise<FileSystemPackage> {
     const fileObjects = new Map<string, File>();
     const directories = new Map<string, string[]>();
 
-    async function readDirectory(directory: string, directoryHandle: FileSystemDirectoryHandle) {
+    async function readDirectory(
+      directory: string,
+      directoryHandle: FileSystemDirectoryHandle,
+    ) {
       const directoryChildren: string[] = [];
       directories.set(directory, directoryChildren);
       for await (const handle of directoryHandle.values()) {
-        const file = directory !== '.' ? `${directory}/${handle.name}` : handle.name;
+        const file =
+          directory !== '.' ? `${directory}/${handle.name}` : handle.name;
         directoryChildren.push(file);
         switch (handle.kind) {
           case 'directory':
             await readDirectory(file, handle as FileSystemDirectoryHandle);
             break;
           case 'file':
-            fileObjects.set(file, await (handle as FileSystemFileHandle).getFile());
+            fileObjects.set(
+              file,
+              await (handle as FileSystemFileHandle).getFile(),
+            );
             break;
         }
       }

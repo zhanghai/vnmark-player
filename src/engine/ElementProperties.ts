@@ -1,4 +1,4 @@
-import {EngineError} from './Engine';
+import { EngineError } from './Engine';
 
 import {
   AngleValue,
@@ -67,8 +67,12 @@ export interface LayoutElementProperties extends BaseElementProperties {
 }
 
 export type ElementProperties =
-  ImageElementProperties | TextElementProperties | ChoiceElementProperties
-  | AudioElementProperties | VideoElementProperties | EffectElementProperties
+  | ImageElementProperties
+  | TextElementProperties
+  | ChoiceElementProperties
+  | AudioElementProperties
+  | VideoElementProperties
+  | EffectElementProperties
   | LayoutElementProperties;
 
 export type Property = {
@@ -76,16 +80,17 @@ export type Property = {
   readonly index?: ElementProperties['index'];
   readonly name: string;
   readonly value: PropertyValue;
-}
+};
 
 export namespace Property {
   export function parse(
     elementName: string,
     propertyName: string,
-    propertyValue: string
+    propertyValue: string,
   ): Property {
-    const elementNameMatch =
-      elementName.match(/^([A-Za-z_](?:[A-Za-z0-9_]*[A-Za-z_])?)([1-9][0-9]*)?$/);
+    const elementNameMatch = elementName.match(
+      /^([A-Za-z_](?:[A-Za-z0-9_]*[A-Za-z_])?)([1-9][0-9]*)?$/,
+    );
     if (!elementNameMatch) {
       throw new EngineError(`Unsupported element name "${elementName}"`);
     }
@@ -109,33 +114,33 @@ export namespace Property {
       case 'layout':
         if (indexString) {
           throw new EngineError(
-            `Unsupported index ${indexString} on element type "${type}" from "${elementName}"`
+            `Unsupported index ${indexString} on element type "${type}" from "${elementName}"`,
           );
         }
         break;
       default:
-        throw new EngineError(`Unsupported element type "${type}" from "${elementName}"`);
+        throw new EngineError(
+          `Unsupported element type "${type}" from "${elementName}"`,
+        );
     }
     let name: string | undefined;
     let value: PropertyValue | undefined;
     switch (propertyName) {
       case 'value':
         name = 'value';
-        value =
-          parsePropertyValue(
-            propertyName,
-            propertyValue,
-            it => NoneValue.parse(it) ?? StringValue.parse(it),
-          );
+        value = parsePropertyValue(
+          propertyName,
+          propertyValue,
+          it => NoneValue.parse(it) ?? StringValue.parse(it),
+        );
         break;
       case 'transition_duration':
         name = 'transitionDuration';
-        value =
-          parsePropertyValue(
-            propertyName,
-            propertyValue,
-            it => ZeroValue.parse(it) ?? TimeValue.parse(it),
-          );
+        value = parsePropertyValue(
+          propertyName,
+          propertyValue,
+          it => ZeroValue.parse(it) ?? TimeValue.parse(it),
+        );
         break;
     }
     if (name === undefined) {
@@ -147,138 +152,140 @@ export namespace Property {
           switch (propertyName) {
             case 'anchor_x':
               name = 'anchorX';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
-                    PercentageValue.parse(it),
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it =>
+                  ZeroValue.parse(it) ??
+                  LengthValue.parse(it) ??
+                  PercentageValue.parse(it),
+              );
               break;
             case 'anchor_y':
               name = 'anchorY';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
-                    PercentageValue.parse(it),
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it =>
+                  ZeroValue.parse(it) ??
+                  LengthValue.parse(it) ??
+                  PercentageValue.parse(it),
+              );
               break;
             case 'position_x':
               name = 'positionX';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
-                    PercentageValue.parse(it),
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it =>
+                  ZeroValue.parse(it) ??
+                  LengthValue.parse(it) ??
+                  PercentageValue.parse(it),
+              );
               break;
             case 'position_y':
               name = 'positionY';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
-                    PercentageValue.parse(it),
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it =>
+                  ZeroValue.parse(it) ??
+                  LengthValue.parse(it) ??
+                  PercentageValue.parse(it),
+              );
               break;
             case 'offset_x':
               name = 'offsetX';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
-                    PercentageValue.parse(it),
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it =>
+                  ZeroValue.parse(it) ??
+                  LengthValue.parse(it) ??
+                  PercentageValue.parse(it),
+              );
               break;
             case 'offset_y':
               name = 'offsetY';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
-                    PercentageValue.parse(it),
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it =>
+                  ZeroValue.parse(it) ??
+                  LengthValue.parse(it) ??
+                  PercentageValue.parse(it),
+              );
               break;
             case 'pivot_x':
               console.log(type, propertyName, propertyValue);
               name = 'pivotX';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => ZeroValue.parse(it) ?? LengthValue.parse(it)
-                    ?? PercentageValue.parse(it),
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it =>
+                  ZeroValue.parse(it) ??
+                  LengthValue.parse(it) ??
+                  PercentageValue.parse(it),
+              );
               break;
             case 'pivot_y':
               name = 'pivotY';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => ZeroValue.parse(it) ?? LengthValue.parse(it) ??
-                    PercentageValue.parse(it),
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it =>
+                  ZeroValue.parse(it) ??
+                  LengthValue.parse(it) ??
+                  PercentageValue.parse(it),
+              );
               break;
             case 'scale_x':
               name = 'scaleX';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => NumberValue.parse(it) ?? PercentageValue.parse(it)
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it => NumberValue.parse(it) ?? PercentageValue.parse(it),
+              );
               break;
             case 'scale_y':
               name = 'scaleY';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => NumberValue.parse(it) ?? PercentageValue.parse(it)
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it => NumberValue.parse(it) ?? PercentageValue.parse(it),
+              );
               break;
             case 'skew_x':
               name = 'skewX';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => ZeroValue.parse(it) ?? AngleValue.parse(it)
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it => ZeroValue.parse(it) ?? AngleValue.parse(it),
+              );
               break;
             case 'skew_y':
               name = 'skewY';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => ZeroValue.parse(it) ?? AngleValue.parse(it)
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it => ZeroValue.parse(it) ?? AngleValue.parse(it),
+              );
               break;
             case 'rotation':
               name = 'rotation';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => ZeroValue.parse(it) ?? AngleValue.parse(it)
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it => ZeroValue.parse(it) ?? AngleValue.parse(it),
+              );
               break;
             case 'alpha':
               name = 'alpha';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => NumberValue.parse(it) ?? PercentageValue.parse(it)
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it => NumberValue.parse(it) ?? PercentageValue.parse(it),
+              );
               break;
           }
           break;
@@ -289,12 +296,15 @@ export namespace Property {
           switch (propertyName) {
             case 'enabled':
               name = 'enabled';
-              value =
-                parsePropertyValue(propertyName, propertyValue, it => BooleanValue.parse(it));
+              value = parsePropertyValue(propertyName, propertyValue, it =>
+                BooleanValue.parse(it),
+              );
               break;
             case 'script':
               name = 'script';
-              value = parsePropertyValue(propertyName, propertyValue, it => StringValue.parse(it));
+              value = parsePropertyValue(propertyName, propertyValue, it =>
+                StringValue.parse(it),
+              );
               break;
           }
           break;
@@ -304,17 +314,17 @@ export namespace Property {
           switch (propertyName) {
             case 'volume':
               name = 'volume';
-              value =
-                parsePropertyValue(
-                  propertyName,
-                  propertyValue,
-                  it => NumberValue.parse(it) ?? PercentageValue.parse(it)
-                );
+              value = parsePropertyValue(
+                propertyName,
+                propertyValue,
+                it => NumberValue.parse(it) ?? PercentageValue.parse(it),
+              );
               break;
             case 'loop':
               name = 'loop';
-              value =
-                parsePropertyValue(propertyName, propertyValue, it => BooleanValue.parse(it));
+              value = parsePropertyValue(propertyName, propertyValue, it =>
+                BooleanValue.parse(it),
+              );
               break;
           }
           break;
@@ -330,10 +340,10 @@ export namespace Property {
     }
     if (name === undefined || value === undefined) {
       throw new EngineError(
-        `Unexpected property name "${propertyName}" on element type "${type}"`
+        `Unexpected property name "${propertyName}" on element type "${type}"`,
       );
     }
-    return {type, ...(index && {index}), name, value};
+    return { type, ...(index && { index }), name, value };
   }
 
   function parsePropertyValue<T extends PropertyValue | undefined>(
@@ -344,7 +354,7 @@ export namespace Property {
     const value = InitialValue.parse(propertyValue) ?? parse(propertyValue);
     if (value === undefined) {
       throw new EngineError(
-        `Invalid value "${propertyValue}" for property "${propertyName}"`
+        `Invalid value "${propertyValue}" for property "${propertyName}"`,
       );
     }
     return value;

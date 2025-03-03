@@ -1,6 +1,6 @@
 import * as Yaml from 'yaml';
 
-import {PackageError} from './Package';
+import { PackageError } from './Package';
 
 export const MANIFEST_FILE = 'manifest.yaml';
 
@@ -30,7 +30,9 @@ export class Manifest {
       }
       for (const [nameLanguage, nameValue] of Object.entries(name)) {
         if (typeof nameValue !== 'string') {
-          throw new PackageError(`Invalid name "${nameValue}" for language "${nameLanguage}"`);
+          throw new PackageError(
+            `Invalid name "${nameValue}" for language "${nameLanguage}"`,
+          );
         }
         names.set(nameLanguage, nameValue);
       }

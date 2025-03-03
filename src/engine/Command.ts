@@ -1,5 +1,5 @@
-import {Property} from './ElementProperties';
-import {Engine, EngineError} from './Engine';
+import { Property } from './ElementProperties';
+import { Engine, EngineError } from './Engine';
 
 export interface Command {
   name: string;
@@ -31,7 +31,9 @@ const COMMAND_ARRAY: Command[] = [
     name: 'exit',
     argumentCount: 0,
     async execute(engine): Promise<boolean> {
-      engine.updateState(it => it.nextLineIndex = engine.document.lines.length);
+      engine.updateState(it => {
+        it.nextLineIndex = engine.document.lines.length;
+      });
       return false;
     },
   },
@@ -44,7 +46,9 @@ const COMMAND_ARRAY: Command[] = [
       if (labelIndex === undefined) {
         throw new EngineError(`Unknown label "${labelName}"`);
       }
-      engine.updateState(it => it.nextLineIndex = labelIndex);
+      engine.updateState(it => {
+        it.nextLineIndex = labelIndex;
+      });
       return false;
     },
   },
@@ -59,7 +63,9 @@ const COMMAND_ARRAY: Command[] = [
       }
       const conditionValue = engine.evaluateScript(condition);
       if (conditionValue) {
-        engine.updateState(it => it.nextLineIndex = labelIndex);
+        engine.updateState(it => {
+          it.nextLineIndex = labelIndex;
+        });
         return false;
       } else {
         return true;
@@ -77,7 +83,7 @@ const COMMAND_ARRAY: Command[] = [
     name: 'pause',
     argumentCount: 0,
     async execute(engine) {
-      return await engine.updateView({type: 'pause'});
+      return await engine.updateView({ type: 'pause' });
     },
   },
   {
@@ -87,8 +93,11 @@ const COMMAND_ARRAY: Command[] = [
       const [elementName, propertyName, propertyValue] = arguments_;
       validateName(elementName);
       validateName(propertyName);
-      const {type, index, name, value} =
-        Property.parse(elementName, propertyName, propertyValue);
+      const { type, index, name, value } = Property.parse(
+        elementName,
+        propertyName,
+        propertyValue,
+      );
       const canonicalElementName = index ? `${type}${index}` : type;
       engine.updateState(it => {
         const element = it.elements[canonicalElementName];
@@ -106,8 +115,11 @@ const COMMAND_ARRAY: Command[] = [
             // @ts-expect-error TS7053
             element[name] = value;
           } else {
-            it.elements[canonicalElementName] =
-              {type, ...(index && {index}), [name]: value};
+            it.elements[canonicalElementName] = {
+              type,
+              ...(index && { index }),
+              [name]: value,
+            };
           }
         }
       });
@@ -122,14 +134,16 @@ const COMMAND_ARRAY: Command[] = [
       const [durationMillisString] = arguments_;
       const durationMillis = Number(durationMillisString);
       if (Number.isNaN(durationMillis)) {
-        throw new EngineError(`Cannot parse duration millis "${durationMillisString}"`);
+        throw new EngineError(
+          `Cannot parse duration millis "${durationMillisString}"`,
+        );
       }
       if (!Number.isInteger(durationMillis) || durationMillis < 0) {
         throw new EngineError(
-          `Duration millis ${durationMillis} is not a non-negative integer`
+          `Duration millis ${durationMillis} is not a non-negative integer`,
         );
       }
-      return await engine.updateView({type: 'sleep', durationMillis});
+      return await engine.updateView({ type: 'sleep', durationMillis });
     },
   },
   {
@@ -140,7 +154,7 @@ const COMMAND_ARRAY: Command[] = [
       if (!elementProperties) {
         throw new EngineError(`Empty element properties to snap`);
       }
-      return await engine.updateView({type: 'snap', elementProperties});
+      return await engine.updateView({ type: 'snap', elementProperties });
     },
   },
   {
@@ -151,7 +165,7 @@ const COMMAND_ARRAY: Command[] = [
       if (!elementProperties) {
         throw new EngineError(`Empty element properties to snap`);
       }
-      return await engine.updateView({type: 'wait', elementProperties});
+      return await engine.updateView({ type: 'wait', elementProperties });
     },
   },
 ];
@@ -162,4 +176,6 @@ function validateName(name: string) {
   }
 }
 
-export const COMMANDS: Map<string, Command> = new Map(COMMAND_ARRAY.map(it => [it.name, it]));
+export const COMMANDS: Map<string, Command> = new Map(
+  COMMAND_ARRAY.map(it => [it.name, it]),
+);

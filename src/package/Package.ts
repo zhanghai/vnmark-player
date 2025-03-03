@@ -1,4 +1,4 @@
-import {Manifest} from './Manifest';
+import { Manifest } from './Manifest';
 
 export class PackageError extends Error {
   constructor(message?: string, options?: ErrorOptions) {

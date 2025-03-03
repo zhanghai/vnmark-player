@@ -1,5 +1,5 @@
-import {IdentityConverter} from './Converters';
-import {LinearEasing} from './Easings';
+import { IdentityConverter } from './Converters';
+import { LinearEasing } from './Easings';
 
 export interface Converter<ValueType> {
   convertToNumber(value: ValueType): number;
@@ -8,8 +8,10 @@ export interface Converter<ValueType> {
 
 export type Easing = (fraction: number) => number;
 
-export type TransitionCallback<ValueType> =
-  (value: ValueType, transition: Transition<ValueType>) => void;
+export type TransitionCallback<ValueType> = (
+  value: ValueType,
+  transition: Transition<ValueType>,
+) => void;
 
 export class Transition<ValueType> {
   public currentValue: ValueType;
@@ -52,27 +54,37 @@ export class Transition<ValueType> {
     return this;
   }
 
-  addOnStartCallback(callback: TransitionCallback<ValueType>): Transition<ValueType> {
+  addOnStartCallback(
+    callback: TransitionCallback<ValueType>,
+  ): Transition<ValueType> {
     this.onStartCallbacks.add(callback);
     return this;
   }
 
-  addOnPauseCallback(callback: TransitionCallback<ValueType>): Transition<ValueType> {
+  addOnPauseCallback(
+    callback: TransitionCallback<ValueType>,
+  ): Transition<ValueType> {
     this.onPauseCallbacks.add(callback);
     return this;
   }
 
-  addOnResumeCallback(callback: TransitionCallback<ValueType>): Transition<ValueType> {
+  addOnResumeCallback(
+    callback: TransitionCallback<ValueType>,
+  ): Transition<ValueType> {
     this.onResumeCallbacks.add(callback);
     return this;
   }
 
-  addOnEndCallback(callback: TransitionCallback<ValueType>): Transition<ValueType> {
+  addOnEndCallback(
+    callback: TransitionCallback<ValueType>,
+  ): Transition<ValueType> {
     this.onEndCallbacks.add(callback);
     return this;
   }
 
-  addOnUpdateCallback(callback: TransitionCallback<ValueType>): Transition<ValueType> {
+  addOnUpdateCallback(
+    callback: TransitionCallback<ValueType>,
+  ): Transition<ValueType> {
     this.onUpdateCallbacks.add(callback);
     return this;
   }
@@ -80,7 +92,9 @@ export class Transition<ValueType> {
   asPromise(): Promise<Transition<ValueType>> {
     let promise = this.promise;
     if (!promise) {
-      promise = new Promise(resolve => this.resolvePromise = () => resolve(this));
+      promise = new Promise(resolve => {
+        this.resolvePromise = () => resolve(this);
+      });
       this.promise = promise;
     }
     return promise;
@@ -167,11 +181,15 @@ export class Transition<ValueType> {
   }
 
   get fraction(): number {
-    return Math.min(Math.max(0, (this.runningTime - this.delay) / this.duration), 1);
+    return Math.min(
+      Math.max(0, (this.runningTime - this.delay) / this.duration),
+      1,
+    );
   }
 
   set fraction(fraction: number) {
-    this.runningTime = this.delay + Math.min(Math.max(0, fraction), 1) * this.duration;
+    this.runningTime =
+      this.delay + Math.min(Math.max(0, fraction), 1) * this.duration;
     this.updateCurrentValue();
   }
 
@@ -195,7 +213,8 @@ export class Transition<ValueType> {
     const numberFraction = this.easing(fraction);
     const initialNumber = this.converter.convertToNumber(this.startValue);
     const targetNumber = this.converter.convertToNumber(this.endValue);
-    const currentNumber = initialNumber + numberFraction * (targetNumber - initialNumber);
+    const currentNumber =
+      initialNumber + numberFraction * (targetNumber - initialNumber);
     this.currentValue = this.converter.convertFromNumber(currentNumber);
 
     const isEnding = fraction === 1;

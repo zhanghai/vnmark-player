@@ -9,9 +9,9 @@ export interface InitialValue extends PropertyValue {
 export namespace InitialValue {
   export function parse(source: string): InitialValue | undefined {
     if (source !== 'initial') {
-      return undefined
+      return undefined;
     }
-    return {type: 'initial'};
+    return { type: 'initial' };
   }
 }
 
@@ -22,9 +22,9 @@ export interface NoneValue extends PropertyValue {
 export namespace NoneValue {
   export function parse(source: string): NoneValue | undefined {
     if (source !== 'none') {
-      return undefined
+      return undefined;
     }
-    return {type: 'none'};
+    return { type: 'none' };
   }
 
   export const VALUE = Symbol('none');
@@ -44,9 +44,9 @@ export interface ZeroValue extends PropertyValue {
 export namespace ZeroValue {
   export function parse(source: string): ZeroValue | undefined {
     if (source !== '0') {
-      return undefined
+      return undefined;
     }
-    return {type: 'zero'};
+    return { type: 'zero' };
   }
 
   export function resolve(value: PropertyValue): number | undefined {
@@ -69,11 +69,11 @@ export namespace AngleValue {
     if (source.endsWith('deg')) {
       unit = 'deg';
     } else if (source.endsWith('grad')) {
-      unit = 'grad'
+      unit = 'grad';
     } else if (source.endsWith('rad')) {
-      unit = 'rad'
+      unit = 'rad';
     } else if (source.endsWith('turn')) {
-      unit = 'turn'
+      unit = 'turn';
     } else {
       return undefined;
     }
@@ -81,20 +81,20 @@ export namespace AngleValue {
     if (Number.isNaN(value)) {
       return undefined;
     }
-    return {type: 'angle', value, unit};
+    return { type: 'angle', value, unit };
   }
 
   export function resolve(value: PropertyValue): number | undefined {
     if (value.type === 'angle') {
       const angle = value as AngleValue;
       switch (angle.unit) {
-        case "deg":
-          return angle.value * Math.PI / 180;
-        case "rad":
+        case 'deg':
+          return (angle.value * Math.PI) / 180;
+        case 'rad':
           return angle.value;
-        case "grad":
-          return angle.value * Math.PI / 200;
-        case "turn":
+        case 'grad':
+          return (angle.value * Math.PI) / 200;
+        case 'turn':
           return angle.value * 2 * Math.PI;
       }
     }
@@ -120,7 +120,7 @@ export namespace BooleanValue {
       default:
         return undefined;
     }
-    return {type: 'boolean', value};
+    return { type: 'boolean', value };
   }
 }
 
@@ -135,7 +135,7 @@ export namespace NumberValue {
     if (Number.isNaN(value)) {
       return undefined;
     }
-    return {type: 'number', value};
+    return { type: 'number', value };
   }
 
   export function resolve(value: PropertyValue): number | undefined {
@@ -162,14 +162,17 @@ export namespace LengthValue {
     if (Number.isNaN(value)) {
       return undefined;
     }
-    return {type: 'length', value, unit: 'px'};
+    return { type: 'length', value, unit: 'px' };
   }
 
-  export function resolve(value: PropertyValue, density: number): number | undefined {
+  export function resolve(
+    value: PropertyValue,
+    density: number,
+  ): number | undefined {
     if (value.type === 'length') {
       const length = value as LengthValue;
       switch (length.unit) {
-        case "px":
+        case 'px':
           return length.value * density;
       }
     }
@@ -191,13 +194,16 @@ export namespace PercentageValue {
     if (Number.isNaN(value)) {
       return undefined;
     }
-    return {type: 'percentage', value};
+    return { type: 'percentage', value };
   }
 
-  export function resolve(value: PropertyValue, parentValue: number): number | undefined {
+  export function resolve(
+    value: PropertyValue,
+    parentValue: number,
+  ): number | undefined {
     if (value.type === 'percentage') {
       const percentage = value as PercentageValue;
-      return percentage.value / 100 * parentValue;
+      return (percentage.value / 100) * parentValue;
     }
     return undefined;
   }
@@ -210,17 +216,17 @@ export interface StringValue extends PropertyValue {
 
 export namespace StringValue {
   export function parse(source: string): StringValue | undefined {
-    if (!source.startsWith('\'')) {
-      return {type: 'string', value: source};
+    if (!source.startsWith("'")) {
+      return { type: 'string', value: source };
     }
-    if (!source.endsWith('\'')) {
+    if (!source.endsWith("'")) {
       return undefined;
     }
     let value = '';
     for (let i = 0; i < source.length; ) {
       const char = source[i];
       switch (char) {
-        case '\'':
+        case "'":
           if (i < source.length - 1) {
             return undefined;
           }
@@ -232,7 +238,7 @@ export namespace StringValue {
           }
           const nextChar = source[i + 1];
           switch (nextChar) {
-            case '\'':
+            case "'":
             case '\\':
               value += nextChar;
               break;
@@ -248,7 +254,7 @@ export namespace StringValue {
           break;
       }
     }
-    return {type: 'string', value};
+    return { type: 'string', value };
   }
 
   export function resolve(value: PropertyValue): string | undefined {
@@ -272,7 +278,7 @@ export namespace TimeValue {
     if (source.endsWith('ms')) {
       unit = 'ms';
     } else if (source.endsWith('s')) {
-      unit = 's'
+      unit = 's';
     } else {
       return undefined;
     }
@@ -280,7 +286,7 @@ export namespace TimeValue {
     if (Number.isNaN(value)) {
       return undefined;
     }
-    return {type: 'time', value, unit};
+    return { type: 'time', value, unit };
   }
 
   export function resolve(value: PropertyValue): number | undefined {

@@ -1,6 +1,13 @@
-import {Matrix, ObservablePoint, PointData, Sprite, SpriteOptions, Texture} from 'pixi.js';
-import {ImageElementResolvedProperties} from './ElementResolvedProperties';
-import {ViewError} from './View';
+import {
+  Matrix,
+  ObservablePoint,
+  PointData,
+  Sprite,
+  SpriteOptions,
+  Texture,
+} from 'pixi.js';
+import { ImageElementResolvedProperties } from './ElementResolvedProperties';
+import { ViewError } from './View';
 
 export class ImageSprite extends Sprite {
   constructor(options?: SpriteOptions | Texture) {
@@ -79,7 +86,8 @@ export class ImageSprite extends Sprite {
     const offset = this.offset;
     // These operations are prepending the transformation matrices, so we apply them in reverse
     // order compared to the spec.
-    localTransform.identity()
+    localTransform
+      .identity()
       .translate(-pivot.x, -pivot.y)
       .scale(scale.x, scale.y);
     skewMatrix(localTransform, skew.x, skew.y)

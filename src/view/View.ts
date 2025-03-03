@@ -1,7 +1,11 @@
-import {Application} from 'pixi.js';
-import {ElementProperties, Engine, State, UpdateViewOptions} from '../engine';
-import {resolveElementValue} from './ElementResolvedProperties';
-import {Element, ImageElement, ImageElementTransitionOptions} from './Element';
+import { Application } from 'pixi.js';
+import { ElementProperties, Engine, State, UpdateViewOptions } from '../engine';
+import { resolveElementValue } from './ElementResolvedProperties';
+import {
+  Element,
+  ImageElement,
+  ImageElementTransitionOptions,
+} from './Element';
 
 export class ViewError extends Error {
   constructor(message?: string, options?: ErrorOptions) {
@@ -11,22 +15,25 @@ export class ViewError extends Error {
 
 export class View {
   private pixiApplication!: Application;
-  private elements = new Map<string, Element<ElementProperties, unknown>>;
+  private elements = new Map<string, Element<ElementProperties, unknown>>();
   private dialogueElement!: HTMLElement;
 
   private state: State | undefined;
 
   private resolveUpdate: ((value: boolean) => void) | undefined;
 
-  constructor(readonly rootElement: HTMLElement, readonly engine: Engine) {
-    engine.viewUpdater = (options) => this.update(options);
+  constructor(
+    readonly rootElement: HTMLElement,
+    readonly engine: Engine,
+  ) {
+    engine.viewUpdater = options => this.update(options);
   }
 
   async init() {
     const rootElement = this.rootElement;
     rootElement.style.position = 'relative';
     const pixiApplication = new Application();
-    await pixiApplication.init({sharedTicker: true});
+    await pixiApplication.init({ sharedTicker: true });
     const canvas = pixiApplication.canvas;
     canvas.style.position = 'absolute';
     canvas.style.inset = '0';
@@ -63,51 +70,65 @@ export class View {
 
     const oldElementPropertiesMap = oldState?.elements ?? {};
     const newElementPropertiesMap = newState.elements;
-    const elementNames =
-      [...new Set([...Object.keys(oldElementPropertiesMap),
-        ...Object.keys(newElementPropertiesMap)])]
-        .sort((left, right) => {
-          const leftElementProperties =
-            oldElementPropertiesMap[left] ?? newElementPropertiesMap[left];
-          const rightElementProperties =
-            oldElementPropertiesMap[right] ?? newElementPropertiesMap[right];
-          if (leftElementProperties.type < rightElementProperties.type) {
-            return -1;
-          } else if (leftElementProperties.type > rightElementProperties.type) {
-            return 1;
-          }
-          if (leftElementProperties.index === undefined
-            || rightElementProperties.index === undefined) {
-            return 0;
-          }
-          return leftElementProperties.index - rightElementProperties.index;
-        });
+    const elementNames = [
+      ...new Set([
+        ...Object.keys(oldElementPropertiesMap),
+        ...Object.keys(newElementPropertiesMap),
+      ]),
+    ].sort((left, right) => {
+      const leftElementProperties =
+        oldElementPropertiesMap[left] ?? newElementPropertiesMap[left];
+      const rightElementProperties =
+        oldElementPropertiesMap[right] ?? newElementPropertiesMap[right];
+      if (leftElementProperties.type < rightElementProperties.type) {
+        return -1;
+      } else if (leftElementProperties.type > rightElementProperties.type) {
+        return 1;
+      }
+      if (
+        leftElementProperties.index === undefined ||
+        rightElementProperties.index === undefined
+      ) {
+        return 0;
+      }
+      return leftElementProperties.index - rightElementProperties.index;
+    });
 
-    const figureCount =
-      Object.values(newElementPropertiesMap).reduce(
-        (previousValue, currentValue) =>
-          currentValue.type === 'figure' && resolveElementValue(currentValue)
-            ? previousValue + 1 : previousValue,
-        0,
-      );
+    const figureCount = Object.values(newElementPropertiesMap).reduce(
+      (previousValue, currentValue) =>
+        currentValue.type === 'figure' && resolveElementValue(currentValue)
+          ? previousValue + 1
+          : previousValue,
+      0,
+    );
     let figureIndex = 0;
     const elementTransitionGenerators = [];
     for (const elementName of elementNames) {
       const oldElementProperties = oldElementPropertiesMap[elementName];
       const newElementProperties = newElementPropertiesMap[elementName];
-      const elementProperties =
-        newElementProperties
-        ?? {type: oldElementProperties.type, index: oldElementProperties.index};
+      const elementProperties = newElementProperties ?? {
+        type: oldElementProperties.type,
+        index: oldElementProperties.index,
+      };
 
-      if (newElementProperties && newElementProperties.type === 'figure'
-        && resolveElementValue(newElementProperties)) {
+      if (
+        newElementProperties &&
+        newElementProperties.type === 'figure' &&
+        resolveElementValue(newElementProperties)
+      ) {
         ++figureIndex;
       }
-      const imageElementTransitionOptions: ImageElementTransitionOptions =
-        {figureIndex, figureCount};
+      const imageElementTransitionOptions: ImageElementTransitionOptions = {
+        figureIndex,
+        figureCount,
+      };
 
       let element = this.elements.get(elementName);
-      if (!element && newElementProperties && resolveElementValue(newElementProperties)) {
+      if (
+        !element &&
+        newElementProperties &&
+        resolveElementValue(newElementProperties)
+      ) {
         switch (newElementProperties.type) {
           case 'name':
           case 'text':
@@ -118,7 +139,10 @@ export class View {
           case 'foreground':
           case 'figure':
           case 'avatar':
-            element = new ImageElement(this.engine.package_, this.pixiApplication.stage);
+            element = new ImageElement(
+              this.engine.package_,
+              this.pixiApplication.stage,
+            );
             break;
           case 'music':
           case 'sound':
@@ -145,18 +169,22 @@ export class View {
       );
     }
 
-    const elementTransitionPromises = elementTransitionGenerators.map(it => it.next().value);
+    const elementTransitionPromises = elementTransitionGenerators.map(
+      it => it.next().value,
+    );
     elementTransitionPromises.forEach(it => {
       if (!(it && typeof it.then === 'function')) {
         throw new ViewError(
-          'Element transition didn\'t yield a promise for the first call to next()',
+          "Element transition didn't yield a promise for the first call to next()",
         );
       }
     });
     await Promise.all(elementTransitionPromises);
     elementTransitionGenerators.forEach(it => {
       if (!it.next().done) {
-        throw new ViewError('Element transition isn\'t done after the second call to next()');
+        throw new ViewError(
+          "Element transition isn't done after the second call to next()",
+        );
       }
     });
 
@@ -164,11 +192,17 @@ export class View {
     this.dialogueElement.innerText = JSON.stringify(newState);
     switch (options.type) {
       case 'pause':
-        return new Promise(resolve => this.resolveUpdate = resolve);
+        return new Promise(resolve => {
+          this.resolveUpdate = resolve;
+        });
       case 'sleep': {
         return Promise.race<boolean>([
-          new Promise(resolve => setTimeout(() => resolve(true), options.durationMillis)),
-          new Promise(resolve => this.resolveUpdate = resolve),
+          new Promise(resolve =>
+            setTimeout(() => resolve(true), options.durationMillis),
+          ),
+          new Promise(resolve => {
+            this.resolveUpdate = resolve;
+          }),
         ]);
       }
       case 'snap':
@@ -180,7 +214,9 @@ export class View {
         return Promise.race<boolean>([
           // TODO
           new Promise(resolve => setTimeout(() => resolve(true), 500)),
-          new Promise(resolve => this.resolveUpdate = resolve),
+          new Promise(resolve => {
+            this.resolveUpdate = resolve;
+          }),
         ]);
       default:
         // @ts-expect-error TS2339

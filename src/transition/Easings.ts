@@ -1,6 +1,6 @@
 import bezier from 'bezier-easing';
 
-import {Easing} from './Transition';
+import { Easing } from './Transition';
 
 export const LinearEasing: Easing = it => it;
 

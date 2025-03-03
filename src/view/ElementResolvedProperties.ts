@@ -11,19 +11,24 @@ import {
   TimeValue,
   ZeroValue,
 } from '../engine';
-import {ViewError} from './View';
+import { ViewError } from './View';
 
-export function resolveElementValue(properties: BaseElementProperties): string | undefined {
-  const value =
-    resolvePropertyValue(properties.value, it => NoneValue.resolve(it) ??
-      StringValue.resolve(it));
+export function resolveElementValue(
+  properties: BaseElementProperties,
+): string | undefined {
+  const value = resolvePropertyValue(
+    properties.value,
+    it => NoneValue.resolve(it) ?? StringValue.resolve(it),
+  );
   if (value === NoneValue.VALUE) {
     return undefined;
   }
   return value;
 }
 
-export function resolveElementTransitionDuration(properties: BaseElementProperties): number {
+export function resolveElementTransitionDuration(
+  properties: BaseElementProperties,
+): number {
   let defaultTransitionDuration: number;
   switch (properties.type) {
     case 'background':
@@ -58,10 +63,12 @@ export function resolveElementTransitionDuration(properties: BaseElementProperti
     default:
       throw new ViewError(`Unexpected element type "${properties.type}"`);
   }
-  return resolvePropertyValue(
-    properties.transitionDuration,
-    it => ZeroValue.resolve(it) ?? TimeValue.resolve(it),
-  ) ?? defaultTransitionDuration;
+  return (
+    resolvePropertyValue(
+      properties.transitionDuration,
+      it => ZeroValue.resolve(it) ?? TimeValue.resolve(it),
+    ) ?? defaultTransitionDuration
+  );
 }
 
 export interface ImageElementResolvedProperties {
@@ -98,58 +105,76 @@ export namespace ImageElementResolvedProperties {
     properties: ImageElementProperties,
     options: ResolveOptions,
   ): ImageElementResolvedProperties {
-    const value = resolveElementValue(properties) === options.currentValue ? 1 : 0;
+    const value =
+      resolveElementValue(properties) === options.currentValue ? 1 : 0;
     const anchorX =
       resolvePropertyValue(
         properties.anchorX,
-        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+        it =>
+          ZeroValue.resolve(it) ??
+          LengthValue.resolve(it, options.density) ??
           PercentageValue.resolve(it, options.imageWidth),
       ) ?? (properties.type === 'figure' ? options.imageWidth / 2 : 0);
     const anchorY =
       resolvePropertyValue(
         properties.anchorY,
-        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+        it =>
+          ZeroValue.resolve(it) ??
+          LengthValue.resolve(it, options.density) ??
           PercentageValue.resolve(it, options.imageHeight),
       ) ?? (properties.type === 'figure' ? options.imageHeight : 0);
     const positionX =
       resolvePropertyValue(
         properties.positionX,
-        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+        it =>
+          ZeroValue.resolve(it) ??
+          LengthValue.resolve(it, options.density) ??
           PercentageValue.resolve(it, options.screenWidth),
-      ) ?? (
-        properties.type === 'figure' ?
-          options.figureIndex / (options.figureCount + 1) * options.screenWidth : 0
-      );
+      ) ??
+      (properties.type === 'figure'
+        ? (options.figureIndex / (options.figureCount + 1)) *
+          options.screenWidth
+        : 0);
     const positionY =
       resolvePropertyValue(
         properties.positionY,
-        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+        it =>
+          ZeroValue.resolve(it) ??
+          LengthValue.resolve(it, options.density) ??
           PercentageValue.resolve(it, options.screenHeight),
       ) ?? (properties.type === 'figure' ? options.screenHeight : 0);
     const offsetX =
       resolvePropertyValue(
         properties.offsetX,
-        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+        it =>
+          ZeroValue.resolve(it) ??
+          LengthValue.resolve(it, options.density) ??
           PercentageValue.resolve(it, options.screenWidth),
       ) ?? (properties.type === 'figure' ? options.screenWidth : 0);
     const offsetY =
       resolvePropertyValue(
         properties.offsetY,
-        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+        it =>
+          ZeroValue.resolve(it) ??
+          LengthValue.resolve(it, options.density) ??
           PercentageValue.resolve(it, options.screenHeight),
       ) ?? (properties.type === 'figure' ? options.screenHeight : 0);
     const pivotX =
       resolvePropertyValue(
         properties.pivotX,
-        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+        it =>
+          ZeroValue.resolve(it) ??
+          LengthValue.resolve(it, options.density) ??
           PercentageValue.resolve(it, options.imageWidth),
-      ) ?? (options.imageWidth / 2);
+      ) ?? options.imageWidth / 2;
     const pivotY =
       resolvePropertyValue(
         properties.pivotY,
-        it => ZeroValue.resolve(it) ?? LengthValue.resolve(it, options.density) ??
+        it =>
+          ZeroValue.resolve(it) ??
+          LengthValue.resolve(it, options.density) ??
           PercentageValue.resolve(it, options.imageHeight),
-      ) ?? (options.imageHeight / 2);
+      ) ?? options.imageHeight / 2;
     const scaleX =
       resolvePropertyValue(
         properties.scaleX,
@@ -164,14 +189,12 @@ export namespace ImageElementResolvedProperties {
       resolvePropertyValue(
         properties.skewX,
         it => ZeroValue.resolve(it) ?? AngleValue.resolve(it),
-      ) ??
-      0;
+      ) ?? 0;
     const skewY =
       resolvePropertyValue(
         properties.skewY,
         it => ZeroValue.resolve(it) ?? AngleValue.resolve(it),
-      ) ??
-      0;
+      ) ?? 0;
     const rotation =
       resolvePropertyValue(
         properties.rotation,

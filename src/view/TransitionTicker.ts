@@ -1,5 +1,5 @@
-import {Ticker} from 'pixi.js';
-import {Transition} from '../transition';
+import { Ticker } from 'pixi.js';
+import { Transition } from '../transition';
 
 export class TransitionTicker {
   private time = 0;
