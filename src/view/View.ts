@@ -1,5 +1,5 @@
 import { Application } from 'pixi.js';
-import { ElementProperties, Engine, State, UpdateViewOptions } from '../engine';
+import { ElementProperties, Engine, UpdateViewOptions } from '../engine';
 import { resolveElementValue } from './ElementResolvedProperties';
 import {
   Element,
@@ -17,8 +17,6 @@ export class View {
   private pixiApplication!: Application;
   private elements = new Map<string, Element<ElementProperties, unknown>>();
   private dialogueElement!: HTMLElement;
-
-  private state: State | undefined;
 
   private resolveUpdate: ((value: boolean) => void) | undefined;
 
@@ -64,37 +62,27 @@ export class View {
   }
 
   async update(options: UpdateViewOptions): Promise<boolean> {
-    const oldState = this.state;
-    const newState = this.engine.state;
-    this.state = newState;
+    const elementPropertiesMap = this.engine.state.elements;
+    const elementNames = Object.keys(elementPropertiesMap).sort(
+      (left, right) => {
+        const leftElementProperties = elementPropertiesMap[left];
+        const rightElementProperties = elementPropertiesMap[right];
+        if (leftElementProperties.type < rightElementProperties.type) {
+          return -1;
+        } else if (leftElementProperties.type > rightElementProperties.type) {
+          return 1;
+        }
+        if (
+          leftElementProperties.index === undefined ||
+          rightElementProperties.index === undefined
+        ) {
+          return 0;
+        }
+        return leftElementProperties.index - rightElementProperties.index;
+      },
+    );
 
-    const oldElementPropertiesMap = oldState?.elements ?? {};
-    const newElementPropertiesMap = newState.elements;
-    const elementNames = [
-      ...new Set([
-        ...Object.keys(oldElementPropertiesMap),
-        ...Object.keys(newElementPropertiesMap),
-      ]),
-    ].sort((left, right) => {
-      const leftElementProperties =
-        oldElementPropertiesMap[left] ?? newElementPropertiesMap[left];
-      const rightElementProperties =
-        oldElementPropertiesMap[right] ?? newElementPropertiesMap[right];
-      if (leftElementProperties.type < rightElementProperties.type) {
-        return -1;
-      } else if (leftElementProperties.type > rightElementProperties.type) {
-        return 1;
-      }
-      if (
-        leftElementProperties.index === undefined ||
-        rightElementProperties.index === undefined
-      ) {
-        return 0;
-      }
-      return leftElementProperties.index - rightElementProperties.index;
-    });
-
-    const figureCount = Object.values(newElementPropertiesMap).reduce(
+    const figureCount = Object.values(elementPropertiesMap).reduce(
       (previousValue, currentValue) =>
         currentValue.type === 'figure' && resolveElementValue(currentValue)
           ? previousValue + 1
@@ -104,17 +92,11 @@ export class View {
     let figureIndex = 0;
     const elementTransitionGenerators = [];
     for (const elementName of elementNames) {
-      const oldElementProperties = oldElementPropertiesMap[elementName];
-      const newElementProperties = newElementPropertiesMap[elementName];
-      const elementProperties = newElementProperties ?? {
-        type: oldElementProperties.type,
-        index: oldElementProperties.index,
-      };
+      const elementProperties = elementPropertiesMap[elementName]!;
 
       if (
-        newElementProperties &&
-        newElementProperties.type === 'figure' &&
-        resolveElementValue(newElementProperties)
+        elementProperties.type === 'figure' &&
+        resolveElementValue(elementProperties)
       ) {
         ++figureIndex;
       }
@@ -124,12 +106,8 @@ export class View {
       };
 
       let element = this.elements.get(elementName);
-      if (
-        !element &&
-        newElementProperties &&
-        resolveElementValue(newElementProperties)
-      ) {
-        switch (newElementProperties.type) {
+      if (!element && resolveElementValue(elementProperties)) {
+        switch (elementProperties.type) {
           case 'name':
           case 'text':
           case 'choice':
@@ -189,6 +167,7 @@ export class View {
     });
 
     // TODO
+    const newState = this.engine.state;
     this.dialogueElement.innerText = JSON.stringify(newState);
     switch (options.type) {
       case 'pause':

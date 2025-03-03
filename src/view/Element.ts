@@ -12,13 +12,10 @@ import { ImageSprite } from './ImageSprite';
 import { SharedTransitionTicker } from './TransitionTicker';
 import { Package } from '../package';
 
-export interface Element<
-  PropertiesType extends ElementProperties,
-  OptionsType,
-> {
+export interface Element<Properties extends ElementProperties, Options> {
   transition(
-    properties: PropertiesType,
-    options: OptionsType,
+    properties: Properties,
+    options: Options,
   ): Generator<Promise<unknown>, void, void>;
 }
 
