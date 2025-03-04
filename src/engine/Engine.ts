@@ -22,6 +22,7 @@ import {
 import { Package } from '../package';
 import { COMMANDS } from './Command';
 import { ElementProperties } from './ElementProperties';
+import { ElementPropertyMatcher } from './ElementPropertyMatcher';
 
 export class EngineError extends Error {
   constructor(message?: string, options?: ErrorOptions) {
@@ -124,8 +125,8 @@ export type ViewUpdater = (options: UpdateViewOptions) => Promise<boolean>;
 export type UpdateViewOptions =
   | { type: 'pause' }
   | { type: 'sleep'; durationMillis: number }
-  | { type: 'snap'; elementProperties: string }
-  | { type: 'wait'; elementProperties: string };
+  | { type: 'snap'; elementPropertyMatcher: ElementPropertyMatcher }
+  | { type: 'wait'; elementPropertyMatcher: ElementPropertyMatcher };
 
 export class Engine {
   public viewUpdater: ViewUpdater | undefined;

@@ -1,4 +1,5 @@
 import { Property } from './ElementProperties';
+import { ElementPropertyMatcher } from './ElementPropertyMatcher';
 import { Engine, EngineError } from './Engine';
 
 export interface Command {
@@ -150,22 +151,32 @@ const COMMAND_ARRAY: Command[] = [
     name: 'snap',
     argumentCount: 1,
     async execute(engine, arguments_) {
-      const [elementProperties] = arguments_;
-      if (!elementProperties) {
+      const [elementPropertyNames] = arguments_;
+      if (!elementPropertyNames) {
         throw new EngineError(`Empty element properties to snap`);
       }
-      return await engine.updateView({ type: 'snap', elementProperties });
+      const elementPropertyMatcher =
+        ElementPropertyMatcher.parse(elementPropertyNames);
+      return await engine.updateView({
+        type: 'snap',
+        elementPropertyMatcher,
+      });
     },
   },
   {
     name: 'wait',
     argumentCount: 1,
     async execute(engine, arguments_) {
-      const [elementProperties] = arguments_;
-      if (!elementProperties) {
+      const [elementPropertyNames] = arguments_;
+      if (!elementPropertyNames) {
         throw new EngineError(`Empty element properties to snap`);
       }
-      return await engine.updateView({ type: 'wait', elementProperties });
+      const elementPropertyMatcher =
+        ElementPropertyMatcher.parse(elementPropertyNames);
+      return await engine.updateView({
+        type: 'wait',
+        elementPropertyMatcher,
+      });
     },
   },
 ];

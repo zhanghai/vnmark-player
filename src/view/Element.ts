@@ -2,7 +2,7 @@ import { Assets, Container, Texture } from 'pixi.js';
 import { MultiMap } from 'mnemonist';
 import { Transition } from '../transition';
 import { Entries } from '../util';
-import { ElementProperties, ImageElementProperties } from '../engine';
+import { ElementProperties, ImageElementProperties, Matcher } from '../engine';
 import {
   ImageElementResolvedProperties,
   resolveElementTransitionDuration,
@@ -17,6 +17,10 @@ export interface Element<Properties extends ElementProperties, Options> {
     properties: Properties,
     options: Options,
   ): Generator<Promise<unknown>, void, void>;
+
+  wait(propertyMatcher: Matcher): Promise<void>;
+
+  snap(propertyMatcher: Matcher): void;
 }
 
 export interface ImageElementTransitionOptions {
@@ -225,5 +229,24 @@ export class ImageElement
     this.propertyTransitions.set(propertyName, transition);
     SharedTransitionTicker.add(transition);
     transition.start();
+  }
+
+  wait(propertyMatcher: Matcher): Promise<void> {
+    return Promise.all(
+      Array.from(this.propertyTransitions.entries())
+        .filter(it => propertyMatcher.match(it[0]))
+        .map(it => it[1].asPromise()),
+    ).then(() => {});
+  }
+
+  snap(propertyMatcher: Matcher) {
+    for (const [
+      propertyName,
+      transition,
+    ] of this.propertyTransitions.entries()) {
+      if (propertyMatcher.match(propertyName)) {
+        transition.end();
+      }
+    }
   }
 }
