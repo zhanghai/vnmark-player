@@ -213,7 +213,6 @@ export class ImageElement
       propertyValue,
       transitionDuration,
     )
-      //.setEasing(Material3Easings.Standard)
       .addOnUpdateCallback(it => sprite.setPropertyValue(propertyName, it))
       .addOnEndCallback(() => {
         this.spriteTransitions.remove(sprite, transition);

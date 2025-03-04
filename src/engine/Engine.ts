@@ -340,29 +340,8 @@ export class Engine {
     }
   }
 
-  getBlob(type: string, name: string): Blob {
-    const file = `${type}/${name}`;
-    let blob;
-    if (file in this.package_.files) {
-      blob = this.package_.getBlob(file);
-    } else {
-      const exactFile = this.package_.files.find(it =>
-        it.startsWith(`${file}.`),
-      );
-      if (exactFile) {
-        blob = this.package_.getBlob(exactFile);
-      }
-    }
-    if (!blob) {
-      throw new EngineError(
-        `Cannot find file with type "${type}" and name "${name}"`,
-      );
-    }
-    return blob;
-  }
-
   async setDocument(name: string) {
-    const blob = this.getBlob('vnmark', name);
+    const blob = this.package_.getBlob('vnmark', name);
     const source = await blob.text();
     this._document = Document.parse(source);
     this.updateState(it => {

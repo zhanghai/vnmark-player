@@ -186,15 +186,26 @@ export class View {
         ]);
       }
       case 'snap':
-        // TODO
+        for (const [elementName, element] of this.elements.entries()) {
+          element.snap(
+            options.elementPropertyMatcher.getPropertyMatcher(elementName),
+          );
+        }
         return true;
       case 'wait':
-        // TODO
-        newState.elements.toString();
-        return Promise.race<boolean>([
-          // TODO
-          new Promise(resolve => setTimeout(() => resolve(true), 500)),
-          new Promise(resolve => {
+        return Promise.race([
+          Promise.all(
+            Array.from(this.elements.entries()).flatMap(
+              ([elementName, element]) => {
+                element.wait(
+                  options.elementPropertyMatcher.getPropertyMatcher(
+                    elementName,
+                  ),
+                );
+              },
+            ),
+          ).then(() => true),
+          new Promise<boolean>(resolve => {
             this.resolveUpdate = resolve;
           }),
         ]);

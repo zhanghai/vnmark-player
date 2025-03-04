@@ -23,12 +23,14 @@ export class ElementPropertyMatcher {
 export namespace ElementPropertyMatcher {
   export function parse(input: string): ElementPropertyMatcher {
     const matchers: [Matcher, Matcher][] = [];
-    for (const elementPropertyNames of input.split(/\s*,\s*/)) {
-      const elementAndPropertyNames = elementPropertyNames.split(/\s*.\s*/);
+    for (const elementPropertyName of input.split(/\s*,\s*/)) {
+      const elementAndPropertyNames = elementPropertyName.split(/\s*\.\s*/);
       if (elementAndPropertyNames.length > 2) {
-        throw new EngineError(`Invalid element property names "${input}"`);
+        throw new EngineError(
+          `Invalid element property names "${elementPropertyName}"`,
+        );
       }
-      const [elementName, propertyName] = elementPropertyNames;
+      const [elementName, propertyName] = elementPropertyName;
       matchers.push([
         createGlobMatcher(elementName),
         createGlobMatcher(propertyName),
