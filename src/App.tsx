@@ -1,7 +1,8 @@
+import './App.css';
+
 import { getQuickJS } from 'quickjs-emscripten';
 import { useRef } from 'react';
 
-import './App.css';
 import { Engine } from './engine';
 import { ZipPackage } from './package';
 import { View } from './view';

@@ -1,4 +1,5 @@
 import { Ticker } from 'pixi.js';
+
 import { Transition } from '../transition';
 
 export class TransitionTicker {

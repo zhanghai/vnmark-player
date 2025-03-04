@@ -1,11 +1,12 @@
 import { Application } from 'pixi.js';
+
 import { ElementProperties, Engine, UpdateViewOptions } from '../engine';
-import { resolveElementValue } from './ElementResolvedProperties';
 import {
   Element,
   ImageElement,
   ImageElementTransitionOptions,
 } from './Element';
+import { resolveElementValue } from './ElementResolvedProperties';
 
 export class ViewError extends Error {
   constructor(message?: string, options?: ErrorOptions) {

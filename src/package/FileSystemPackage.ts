@@ -1,5 +1,5 @@
-import { MANIFEST_FILE, Manifest } from './Manifest';
-import { PackageError, Package } from './Package';
+import { Manifest, MANIFEST_FILE } from './Manifest';
+import { Package, PackageError } from './Package';
 
 export class FileSystemPackage extends Package {
   readonly files: string[];

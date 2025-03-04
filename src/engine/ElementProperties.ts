@@ -1,5 +1,4 @@
 import { EngineError } from './Engine';
-
 import {
   AngleValue,
   BooleanValue,

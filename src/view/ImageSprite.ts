@@ -6,6 +6,7 @@ import {
   SpriteOptions,
   Texture,
 } from 'pixi.js';
+
 import { ImageElementResolvedProperties } from './ElementResolvedProperties';
 import { ViewError } from './View';
 

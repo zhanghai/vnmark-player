@@ -1,8 +1,10 @@
-import { Assets, Container, Texture } from 'pixi.js';
 import { MultiMap } from 'mnemonist';
+import { Assets, Container, Texture } from 'pixi.js';
+
+import { ElementProperties, ImageElementProperties, Matcher } from '../engine';
+import { Package } from '../package';
 import { Transition } from '../transition';
 import { Entries } from '../util';
-import { ElementProperties, ImageElementProperties, Matcher } from '../engine';
 import {
   ImageElementResolvedProperties,
   resolveElementTransitionDuration,
@@ -10,7 +12,6 @@ import {
 } from './ElementResolvedProperties';
 import { ImageSprite } from './ImageSprite';
 import { SharedTransitionTicker } from './TransitionTicker';
-import { Package } from '../package';
 
 export interface Element<Properties extends ElementProperties, Options> {
   transition(
