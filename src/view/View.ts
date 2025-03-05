@@ -5,6 +5,8 @@ import {
   Element,
   ImageElement,
   ImageElementTransitionOptions,
+  MainTextElement,
+  NameTextElement,
 } from './Element';
 import { resolveElementValue } from './ElementResolvedProperties';
 
@@ -18,6 +20,7 @@ export class View {
   private pixiApplication!: Application;
   private elements = new Map<string, Element<ElementProperties, unknown>>();
   private dialogueElement!: HTMLElement;
+  private debugElement!: HTMLElement;
 
   private resolveUpdate: ((value: boolean) => void) | undefined;
 
@@ -56,10 +59,15 @@ export class View {
     });
     this.pixiApplication = pixiApplication;
 
-    const dialogElement = document.createElement('div');
-    dialogElement.style.position = 'absolute';
-    rootElement.appendChild(dialogElement);
-    this.dialogueElement = dialogElement;
+    const dialogueElement = document.createElement('div');
+    dialogueElement.style.position = 'absolute';
+    rootElement.appendChild(dialogueElement);
+    this.dialogueElement = dialogueElement;
+
+    const debugElement = document.createElement('div');
+    debugElement.style.position = 'absolute';
+    rootElement.appendChild(debugElement);
+    this.debugElement = debugElement;
   }
 
   async update(options: UpdateViewOptions): Promise<boolean> {
@@ -110,7 +118,17 @@ export class View {
       if (!element && resolveElementValue(elementProperties)) {
         switch (elementProperties.type) {
           case 'name':
+            element = new NameTextElement(
+              this.engine.package_,
+              this.dialogueElement,
+            );
+            break;
           case 'text':
+            element = new MainTextElement(
+              this.engine.package_,
+              this.dialogueElement,
+            );
+            break;
           case 'choice':
             // TODO
             continue;
@@ -169,7 +187,7 @@ export class View {
 
     // TODO
     const newState = this.engine.state;
-    this.dialogueElement.innerText = JSON.stringify(newState);
+    this.debugElement.innerText = JSON.stringify(newState);
     switch (options.type) {
       case 'pause':
         return new Promise(resolve => {

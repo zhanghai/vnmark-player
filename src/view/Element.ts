@@ -1,7 +1,12 @@
 import { MultiMap } from 'mnemonist';
 import { Assets, Container, Texture } from 'pixi.js';
 
-import { ElementProperties, ImageElementProperties, Matcher } from '../engine';
+import {
+  ElementProperties,
+  ImageElementProperties,
+  Matcher,
+  TextElementProperties,
+} from '../engine';
 import { Package } from '../package';
 import { Transition } from '../transition';
 import { Entries } from '../util';
@@ -229,6 +234,193 @@ export class ImageElement
     this.propertyTransitions.set(propertyName, transition);
     SharedTransitionTicker.add(transition);
     transition.start();
+  }
+
+  wait(propertyMatcher: Matcher): Promise<void> {
+    return Promise.all(
+      Array.from(this.propertyTransitions.entries())
+        .filter(it => propertyMatcher.match(it[0]))
+        .map(it => it[1].asPromise()),
+    ).then(() => {});
+  }
+
+  snap(propertyMatcher: Matcher) {
+    for (const [
+      propertyName,
+      transition,
+    ] of this.propertyTransitions.entries()) {
+      if (propertyMatcher.match(propertyName)) {
+        transition.end();
+      }
+    }
+  }
+}
+
+export class NameTextElement
+  implements Element<TextElementProperties, unknown>
+{
+  private element: HTMLParagraphElement | undefined;
+  private properties: TextElementProperties | undefined;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private propertyTransitions = new Map<string, Transition<any>>();
+
+  constructor(
+    // @ts-expect-error TS6138
+    private package_: Package,
+    private container: HTMLElement,
+  ) {}
+
+  *transition(
+    properties: TextElementProperties,
+  ): Generator<Promise<unknown>, void, void> {
+    const oldProperties = this.properties;
+    const newProperties = properties;
+
+    const oldValue = oldProperties
+      ? resolveElementValue(oldProperties)
+      : undefined;
+    const newValue = resolveElementValue(newProperties);
+    if (oldValue === newValue) {
+      yield Promise.resolve();
+      return;
+    }
+
+    // TODO: Load translations.
+    const text = newValue ?? '';
+    yield Promise.resolve();
+
+    let element = this.element;
+    if (!element) {
+      element = document.createElement('p');
+      // TODO: Specify via theme layout
+      element.style.position = 'absolute';
+      element.style.inset = 'auto auto 200 50';
+      this.container.appendChild(element);
+      this.element = element;
+    }
+
+    // TODO: Defend against XSS.
+    element.innerHTML = text;
+
+    this.properties = newValue !== undefined ? newProperties : undefined;
+  }
+
+  wait(propertyMatcher: Matcher): Promise<void> {
+    return Promise.all(
+      Array.from(this.propertyTransitions.entries())
+        .filter(it => propertyMatcher.match(it[0]))
+        .map(it => it[1].asPromise()),
+    ).then(() => {});
+  }
+
+  snap(propertyMatcher: Matcher) {
+    for (const [
+      propertyName,
+      transition,
+    ] of this.propertyTransitions.entries()) {
+      if (propertyMatcher.match(propertyName)) {
+        transition.end();
+      }
+    }
+  }
+}
+
+export class MainTextElement
+  implements Element<TextElementProperties, unknown>
+{
+  private element: HTMLParagraphElement | undefined;
+  private properties: TextElementProperties | undefined;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private propertyTransitions = new Map<string, Transition<any>>();
+
+  constructor(
+    private package_: Package,
+    private container: HTMLElement,
+  ) {}
+
+  *transition(
+    properties: TextElementProperties,
+  ): Generator<Promise<unknown>, void, void> {
+    const oldProperties = this.properties;
+    const newProperties = properties;
+
+    const oldValue = oldProperties
+      ? resolveElementValue(oldProperties)
+      : undefined;
+    const newValue = resolveElementValue(newProperties);
+    if (oldValue === newValue) {
+      yield Promise.resolve();
+      return;
+    }
+
+    // TODO: Load translations.
+    const text = newValue ?? '';
+    yield Promise.resolve();
+
+    let element = this.element;
+    if (!element) {
+      element = document.createElement('p');
+      // TODO: Specify via theme layout
+      element.style.position = 'absolute';
+      element.style.inset = 'auto 0 0 0';
+      this.container.appendChild(element);
+      this.element = element;
+    }
+
+    this.propertyTransitions.get('value')?.end();
+    if (!text) {
+      element.innerHTML = '';
+      return;
+    }
+    // TODO: Defend against XSS.
+    element.innerHTML = text;
+    const textNodeIterator = document.createNodeIterator(
+      element,
+      NodeFilter.SHOW_TEXT,
+    );
+    const textNodes = [];
+    while (textNodeIterator.nextNode()) {
+      textNodes.push(textNodeIterator.referenceNode as Text);
+    }
+    const segmenter = new Intl.Segmenter(this.package_.manifest.locale);
+    const spans: HTMLSpanElement[] = [];
+    for (const textNode of textNodes) {
+      const textSpans = [];
+      for (const { segment } of segmenter.segment(textNode.data)) {
+        const span = document.createElement('span');
+        span.textContent = segment;
+        textSpans.push(span);
+        spans.push(span);
+      }
+      textNode.replaceWith(...textSpans);
+    }
+
+    let transitionDuration = resolveElementTransitionDuration(properties);
+    if (transitionDuration === -1) {
+      transitionDuration = spans.length * 50;
+    }
+    const transition = new Transition(0, spans.length, transitionDuration)
+      .addOnUpdateCallback(it => {
+        for (let i = 0; i < spans.length; ++i) {
+          const opacity = Math.max(0, Math.min(it - i, 1));
+          if (opacity === 1) {
+            spans[i].removeAttribute('style');
+          } else {
+            spans[i].style.opacity = opacity.toString();
+          }
+        }
+      })
+      .addOnEndCallback(() => {
+        this.propertyTransitions.delete('value');
+        SharedTransitionTicker.remove(transition);
+      });
+    this.propertyTransitions.set('value', transition);
+    SharedTransitionTicker.add(transition);
+    transition.start();
+
+    this.properties = newValue !== undefined ? newProperties : undefined;
   }
 
   wait(propertyMatcher: Matcher): Promise<void> {

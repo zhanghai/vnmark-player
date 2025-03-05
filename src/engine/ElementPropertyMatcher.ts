@@ -27,7 +27,7 @@ export namespace ElementPropertyMatcher {
       const elementAndPropertyNames = elementPropertyName.split(/\s*\.\s*/);
       if (elementAndPropertyNames.length > 2) {
         throw new EngineError(
-          `Invalid element property names "${elementPropertyName}"`,
+          `Invalid element property "${elementPropertyName}"`,
         );
       }
       const [elementName, propertyName] = elementPropertyName;

@@ -6,7 +6,7 @@ export const MANIFEST_FILE = 'manifest.yaml';
 
 export class Manifest {
   constructor(
-    readonly language: string,
+    readonly locale: string,
     readonly names: Map<string, string>,
     readonly width: number,
     readonly height: number,
@@ -16,25 +16,25 @@ export class Manifest {
 
   static parse(source: string): Manifest {
     const yaml = Yaml.parse(source);
-    const language = yaml.language;
-    if (typeof language !== 'string') {
-      throw new PackageError(`Invalid language "${language}"`);
+    const locale = yaml.locale;
+    if (typeof locale !== 'string') {
+      throw new PackageError(`Invalid locale "${locale}"`);
     }
     const name = yaml.name;
     const names = new Map<string, string>();
     if (typeof name === 'string') {
-      names.set(language, name);
+      names.set(locale, name);
     } else {
       if (!name || typeof name !== 'object') {
         throw new PackageError(`Invalid name "${name}"`);
       }
-      for (const [nameLanguage, nameValue] of Object.entries(name)) {
+      for (const [nameLocale, nameValue] of Object.entries(name)) {
         if (typeof nameValue !== 'string') {
           throw new PackageError(
-            `Invalid name "${nameValue}" for language "${nameLanguage}"`,
+            `Invalid name "${nameValue}" for locale "${nameLocale}"`,
           );
         }
-        names.set(nameLanguage, nameValue);
+        names.set(nameLocale, nameValue);
       }
     }
     const width = yaml.width;
@@ -53,6 +53,6 @@ export class Manifest {
     if (typeof entrypoint !== 'string' || !entrypoint) {
       throw new PackageError(`Invalid entrypoint "${entrypoint}"`);
     }
-    return new Manifest(language, names, width, height, density, entrypoint);
+    return new Manifest(locale, names, width, height, density, entrypoint);
   }
 }
