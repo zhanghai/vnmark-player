@@ -259,7 +259,6 @@ export class ImageElement
 export class NameTextElement
   implements Element<TextElementProperties, unknown>
 {
-  private element: HTMLParagraphElement | undefined;
   private properties: TextElementProperties | undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -268,7 +267,7 @@ export class NameTextElement
   constructor(
     // @ts-expect-error TS6138
     private package_: Package,
-    private container: HTMLElement,
+    private element: HTMLElement,
   ) {}
 
   *transition(
@@ -290,18 +289,8 @@ export class NameTextElement
     const text = newValue ?? '';
     yield Promise.resolve();
 
-    let element = this.element;
-    if (!element) {
-      element = document.createElement('p');
-      // TODO: Specify via theme layout
-      element.style.position = 'absolute';
-      element.style.inset = 'auto auto 200 50';
-      this.container.appendChild(element);
-      this.element = element;
-    }
-
     // TODO: Defend against XSS.
-    element.innerHTML = text;
+    this.element.innerHTML = text;
 
     this.properties = newValue !== undefined ? newProperties : undefined;
   }
@@ -326,10 +315,9 @@ export class NameTextElement
   }
 }
 
-export class MainTextElement
+export class TextTextElement
   implements Element<TextElementProperties, unknown>
 {
-  private element: HTMLParagraphElement | undefined;
   private properties: TextElementProperties | undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -337,7 +325,7 @@ export class MainTextElement
 
   constructor(
     private package_: Package,
-    private container: HTMLElement,
+    private element: HTMLElement,
   ) {}
 
   *transition(
@@ -359,25 +347,15 @@ export class MainTextElement
     const text = newValue ?? '';
     yield Promise.resolve();
 
-    let element = this.element;
-    if (!element) {
-      element = document.createElement('p');
-      // TODO: Specify via theme layout
-      element.style.position = 'absolute';
-      element.style.inset = 'auto 0 0 0';
-      this.container.appendChild(element);
-      this.element = element;
-    }
-
     this.propertyTransitions.get('value')?.end();
     if (!text) {
-      element.innerHTML = '';
+      this.element.innerHTML = '';
       return;
     }
     // TODO: Defend against XSS.
-    element.innerHTML = text;
+    this.element.innerHTML = text;
     const textNodeIterator = document.createNodeIterator(
-      element,
+      this.element,
       NodeFilter.SHOW_TEXT,
     );
     const textNodes = [];

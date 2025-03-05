@@ -5,8 +5,8 @@ import {
   Element,
   ImageElement,
   ImageElementTransitionOptions,
-  MainTextElement,
   NameTextElement,
+  TextTextElement,
 } from './Element';
 import { resolveElementValue } from './ElementResolvedProperties';
 
@@ -18,9 +18,12 @@ export class ViewError extends Error {
 
 export class View {
   private pixiApplication!: Application;
-  private elements = new Map<string, Element<ElementProperties, unknown>>();
   private dialogueElement!: HTMLElement;
+  private nameElement!: HTMLElement;
+  private textElement!: HTMLElement;
   private debugElement!: HTMLElement;
+
+  private elements = new Map<string, Element<ElementProperties, unknown>>();
 
   private resolveUpdate: ((value: boolean) => void) | undefined;
 
@@ -34,6 +37,9 @@ export class View {
   async init() {
     const rootElement = this.rootElement;
     rootElement.style.position = 'relative';
+    rootElement.style.width = '100%';
+    const manifest = this.engine.package_.manifest;
+    rootElement.style.paddingBottom = `${(manifest.height / manifest.width) * 100}%`;
     const pixiApplication = new Application();
     await pixiApplication.init({ sharedTicker: true });
     const canvas = pixiApplication.canvas;
@@ -43,7 +49,6 @@ export class View {
     rootElement.appendChild(canvas);
     // Not setting resolution in Pixi.js because we need to handle it manually for elements outside
     // Pixi.js anyway.
-    const manifest = this.engine.package_.manifest;
     pixiApplication.renderer.resize(
       Math.round(manifest.width * manifest.density),
       Math.round(manifest.height * manifest.density),
@@ -61,8 +66,15 @@ export class View {
 
     const dialogueElement = document.createElement('div');
     dialogueElement.style.position = 'absolute';
+    dialogueElement.style.inset = 'auto 0 0 0';
     rootElement.appendChild(dialogueElement);
     this.dialogueElement = dialogueElement;
+    const nameElement = document.createElement('div');
+    dialogueElement.appendChild(nameElement);
+    this.nameElement = nameElement;
+    const textElement = document.createElement('div');
+    dialogueElement.appendChild(textElement);
+    this.textElement = textElement;
 
     const debugElement = document.createElement('div');
     debugElement.style.position = 'absolute';
@@ -120,13 +132,13 @@ export class View {
           case 'name':
             element = new NameTextElement(
               this.engine.package_,
-              this.dialogueElement,
+              this.nameElement,
             );
             break;
           case 'text':
-            element = new MainTextElement(
+            element = new TextTextElement(
               this.engine.package_,
-              this.dialogueElement,
+              this.textElement,
             );
             break;
           case 'choice':
