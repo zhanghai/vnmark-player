@@ -32,7 +32,67 @@ function App() {
           }}
         />
       </div>
-      <div ref={viewRef} />
+      <div
+        ref={viewRef}
+        style={{
+          position: 'relative',
+          fontFamily: 'serif',
+          width: 1280,
+          height: 720,
+        }}>
+        <canvas
+          className="canvas"
+          style={{ position: 'absolute', width: '100%', height: '100%' }}
+        />
+        <div
+          className="dialogue"
+          style={{
+            position: 'absolute',
+            inset: 0,
+          }}>
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 420,
+              width: 1280,
+              height: 300,
+            }}
+          />
+          <div className="avatar" style={{ position: 'absolute' }} />
+          <div
+            className="name"
+            style={{
+              position: 'absolute',
+              left: 266,
+              top: 570,
+              width: 78,
+              fontSize: 26,
+              lineHeight: '1.5',
+            }}
+          />
+          <div
+            className="text"
+            style={{
+              position: 'absolute',
+              left: 340,
+              top: 570,
+              width: 600,
+              fontSize: 26,
+              lineHeight: '1.5',
+            }}
+          />
+        </div>
+        <div
+          className="debug"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            fontFamily: 'monospace',
+            whiteSpace: 'pre-wrap',
+          }}></div>
+        <div className="pointer" style={{ position: 'absolute', inset: 0 }} />
+      </div>
     </>
   );
 }

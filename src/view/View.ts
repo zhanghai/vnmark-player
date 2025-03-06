@@ -19,8 +19,9 @@ export class ViewError extends Error {
 export class View {
   private pixiApplication!: Application;
   private dialogueElement!: HTMLElement;
-  private nameElement!: HTMLElement;
-  private textElement!: HTMLElement;
+  private dialogueAvatarElement!: HTMLElement;
+  private dialogueNameElement!: HTMLElement;
+  private dialogueTextElement!: HTMLElement;
   private debugElement!: HTMLElement;
 
   private elements = new Map<string, Element<ElementProperties, unknown>>();
@@ -37,49 +38,49 @@ export class View {
   async init() {
     const rootElement = this.rootElement;
     rootElement.style.position = 'relative';
-    rootElement.style.width = '100%';
-    const manifest = this.engine.package_.manifest;
-    rootElement.style.paddingBottom = `${(manifest.height / manifest.width) * 100}%`;
+
+    const canvas = rootElement.getElementsByClassName(
+      'canvas',
+    )[0] as HTMLCanvasElement;
     const pixiApplication = new Application();
-    await pixiApplication.init({ sharedTicker: true });
-    const canvas = pixiApplication.canvas;
-    canvas.style.position = 'absolute';
-    canvas.style.inset = '0';
-    canvas.style.objectFit = 'contain';
-    rootElement.appendChild(canvas);
+    await pixiApplication.init({ canvas, sharedTicker: true });
     // Not setting resolution in Pixi.js because we need to handle it manually for elements outside
     // Pixi.js anyway.
+    const manifest = this.engine.package_.manifest;
     pixiApplication.renderer.resize(
       Math.round(manifest.width * manifest.density),
       Math.round(manifest.height * manifest.density),
     );
-    const pixiStage = pixiApplication.stage;
-    pixiStage.eventMode = 'static';
-    pixiStage.hitArea = pixiApplication.screen;
-    pixiStage.on('pointerup', () => {
+    pixiApplication.stage.eventMode = 'none';
+    this.pixiApplication = pixiApplication;
+
+    const dialogueElement = rootElement.getElementsByClassName(
+      'dialogue',
+    )[0] as HTMLElement;
+    this.dialogueElement = dialogueElement;
+    this.dialogueAvatarElement = dialogueElement.getElementsByClassName(
+      'avatar',
+    )[0] as HTMLElement;
+    this.dialogueNameElement = dialogueElement.getElementsByClassName(
+      'name',
+    )[0] as HTMLElement;
+    this.dialogueTextElement = dialogueElement.getElementsByClassName(
+      'text',
+    )[0] as HTMLElement;
+
+    const pointerElement = rootElement.getElementsByClassName(
+      'pointer',
+    )[0] as HTMLElement;
+    pointerElement.addEventListener('pointerup', () => {
       if (this.resolveUpdate) {
         this.resolveUpdate(true);
         this.resolveUpdate = undefined;
       }
     });
-    this.pixiApplication = pixiApplication;
 
-    const dialogueElement = document.createElement('div');
-    dialogueElement.style.position = 'absolute';
-    dialogueElement.style.inset = 'auto 0 0 0';
-    rootElement.appendChild(dialogueElement);
-    this.dialogueElement = dialogueElement;
-    const nameElement = document.createElement('div');
-    dialogueElement.appendChild(nameElement);
-    this.nameElement = nameElement;
-    const textElement = document.createElement('div');
-    dialogueElement.appendChild(textElement);
-    this.textElement = textElement;
-
-    const debugElement = document.createElement('div');
-    debugElement.style.position = 'absolute';
-    rootElement.appendChild(debugElement);
-    this.debugElement = debugElement;
+    this.debugElement = rootElement.getElementsByClassName(
+      'debug',
+    )[0] as HTMLElement;
   }
 
   async update(options: UpdateViewOptions): Promise<boolean> {
@@ -132,13 +133,13 @@ export class View {
           case 'name':
             element = new NameTextElement(
               this.engine.package_,
-              this.nameElement,
+              this.dialogueNameElement,
             );
             break;
           case 'text':
             element = new TextTextElement(
               this.engine.package_,
-              this.textElement,
+              this.dialogueTextElement,
             );
             break;
           case 'choice':
@@ -199,7 +200,11 @@ export class View {
 
     // TODO
     const newState = this.engine.state;
-    this.debugElement.innerText = JSON.stringify(newState);
+    this.debugElement.innerText = JSON.stringify(
+      newState,
+      undefined,
+      '    ',
+    ).replace(/\n {12}( {4}|(?=}))/g, ' ');
     switch (options.type) {
       case 'pause':
         return new Promise(resolve => {
