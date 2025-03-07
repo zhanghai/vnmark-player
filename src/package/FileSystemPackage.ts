@@ -13,7 +13,7 @@ export class FileSystemPackage extends Package {
     this.files = Array.from(fileObjects.keys());
   }
 
-  getBlobForFile(file: string): Blob | undefined {
+  async getBlobForFile(file: string): Promise<Blob | undefined> {
     return this.fileObjects.get(file);
   }
 

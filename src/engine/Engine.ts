@@ -341,7 +341,7 @@ export class Engine {
   }
 
   async setDocument(name: string) {
-    const blob = this.package_.getBlob('vnmark', name);
+    const blob = await this.package_.getBlob('vnmark', name);
     const source = await blob.text();
     this._document = Document.parse(source);
     this.updateState(it => {

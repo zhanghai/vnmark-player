@@ -12,9 +12,9 @@ export abstract class Package {
   // Paths of files.
   abstract readonly files: string[];
 
-  protected abstract getBlobForFile(file: string): Blob | undefined;
+  protected abstract getBlobForFile(file: string): Promise<Blob | undefined>;
 
-  getBlobOrNull(...names: string[]): Blob | undefined {
+  async getBlobOrNull(...names: string[]): Promise<Blob | undefined> {
     const file = names.join('/');
     if (file in this.files) {
       return this.getBlobForFile(file);
@@ -27,8 +27,8 @@ export abstract class Package {
     return undefined;
   }
 
-  getBlob(...names: string[]): Blob {
-    const blob = this.getBlobOrNull(...names);
+  async getBlob(...names: string[]): Promise<Blob> {
+    const blob = await this.getBlobOrNull(...names);
     if (!blob) {
       throw new PackageError(`Cannot find file with names "${names}"`);
     }

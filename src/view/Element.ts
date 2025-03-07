@@ -1,5 +1,5 @@
 import { MultiMap } from 'mnemonist';
-import { Assets, Container, Texture } from 'pixi.js';
+import { Assets, Container } from 'pixi.js';
 
 import {
   ElementProperties,
@@ -72,22 +72,20 @@ export class ImageElement
 
     let newSprite: ImageSprite | undefined;
     if (newValue && newValue !== oldValue) {
-      const blobUrl = URL.createObjectURL(
-        this.package_.getBlob(newProperties.type, newValue),
-      );
-      // TODO: Allow proper caching.
-      const newTexturePromise = Assets.load({
-        src: blobUrl,
-        loadParser: 'loadTextures',
-      });
-      let newTexture: Texture;
-      newTexturePromise
-        .then(it => {
-          newTexture = it;
-        })
-        .finally(() => URL.revokeObjectURL(blobUrl));
-      yield newTexturePromise;
-      newSprite = new ImageSprite(newTexture!);
+      yield this.package_
+        .getBlob(newProperties.type, newValue)
+        .then(async blob => {
+          const blobUrl = URL.createObjectURL(blob);
+          try {
+            const newTexture = await Assets.load({
+              src: blobUrl,
+              loadParser: 'loadTextures',
+            });
+            newSprite = new ImageSprite(newTexture);
+          } finally {
+            URL.revokeObjectURL(blobUrl);
+          }
+        });
     } else {
       yield Promise.resolve();
     }

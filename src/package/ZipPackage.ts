@@ -81,7 +81,7 @@ export class ZipPackage extends Package {
     return new ZipPackage(blob, manifest, fileToEntries, directories);
   }
 
-  getBlobForFile(file: string): Blob | undefined {
+  async getBlobForFile(file: string): Promise<Blob | undefined> {
     return ZipPackage.getBlobForFile(this.blob, this.entries, file);
   }
 
