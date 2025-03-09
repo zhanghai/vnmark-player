@@ -5,8 +5,7 @@ import {
   Element,
   ImageElement,
   ImageElementTransitionOptions,
-  NameTextElement,
-  TextTextElement,
+  TextElement,
 } from './Element';
 import { resolveElementValue } from './ElementResolvedProperties';
 
@@ -131,15 +130,17 @@ export class View {
       if (!element && resolveElementValue(elementProperties)) {
         switch (elementProperties.type) {
           case 'name':
-            element = new NameTextElement(
+            element = new TextElement(
               this.engine.package_,
               this.dialogueNameElement,
+              false,
             );
             break;
           case 'text':
-            element = new TextTextElement(
+            element = new TextElement(
               this.engine.package_,
               this.dialogueTextElement,
+              true,
             );
             break;
           case 'choice':

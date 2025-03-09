@@ -65,7 +65,7 @@ export interface AngleValue extends PropertyValue {
 
 export namespace AngleValue {
   export function parse(source: string): AngleValue | undefined {
-    let unit: 'deg' | 'rad' | 'grad' | 'turn';
+    let unit: AngleValue['unit'];
     if (source.endsWith('deg')) {
       unit = 'deg';
     } else if (source.endsWith('grad')) {
@@ -269,16 +269,20 @@ export namespace StringValue {
 export interface TimeValue extends PropertyValue {
   type: 'time';
   value: number;
-  unit: 's' | 'ms';
+  unit: 's' | 'ms' | 'spe' | 'mspe';
 }
 
 export namespace TimeValue {
   export function parse(source: string): TimeValue | undefined {
-    let unit: 's' | 'ms';
+    let unit: TimeValue['unit'];
     if (source.endsWith('ms')) {
       unit = 'ms';
     } else if (source.endsWith('s')) {
       unit = 's';
+    } else if (source.endsWith('mspe')) {
+      unit = 'mspe';
+    } else if (source.endsWith('spe')) {
+      unit = 'spe';
     } else {
       return undefined;
     }
@@ -289,7 +293,10 @@ export namespace TimeValue {
     return { type: 'time', value, unit };
   }
 
-  export function resolve(value: PropertyValue): number | undefined {
+  export function resolve(
+    value: PropertyValue,
+    elementCount: number,
+  ): number | undefined {
     if (value.type == 'time') {
       const time = value as TimeValue;
       switch (time.unit) {
@@ -297,6 +304,10 @@ export namespace TimeValue {
           return time.value * 1000;
         case 'ms':
           return time.value;
+        case 'spe':
+          return time.value * 1000 * elementCount;
+        case 'mspe':
+          return time.value * elementCount;
       }
     }
     return undefined;

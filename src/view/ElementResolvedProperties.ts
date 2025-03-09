@@ -8,6 +8,7 @@ import {
   PercentageValue,
   PropertyValue,
   StringValue,
+  TextElementProperties,
   TimeValue,
   ZeroValue,
 } from '../engine';
@@ -28,6 +29,7 @@ export function resolveElementValue(
 
 export function resolveElementTransitionDuration(
   properties: BaseElementProperties,
+  elementCount: number,
 ): number {
   let defaultTransitionDuration: number;
   switch (properties.type) {
@@ -43,7 +45,7 @@ export function resolveElementTransitionDuration(
       defaultTransitionDuration = 0;
       break;
     case 'text':
-      defaultTransitionDuration = -1;
+      defaultTransitionDuration = 50 * elementCount;
       break;
     case 'choice':
       defaultTransitionDuration = 0;
@@ -66,7 +68,7 @@ export function resolveElementTransitionDuration(
   return (
     resolvePropertyValue(
       properties.transitionDuration,
-      it => ZeroValue.resolve(it) ?? TimeValue.resolve(it),
+      it => ZeroValue.resolve(it) ?? TimeValue.resolve(it, elementCount),
     ) ?? defaultTransitionDuration
   );
 }
@@ -222,6 +224,25 @@ export namespace ImageElementResolvedProperties {
       rotation,
       alpha,
     };
+  }
+}
+
+export interface TextElementResolvedProperties {
+  readonly value: number;
+}
+
+export namespace TextElementResolvedProperties {
+  export interface ResolveOptions {
+    currentValue: string | undefined;
+  }
+
+  export function resolve(
+    properties: TextElementProperties,
+    options: ResolveOptions,
+  ): TextElementResolvedProperties {
+    const value =
+      resolveElementValue(properties) === options.currentValue ? 1 : 0;
+    return { value };
   }
 }
 

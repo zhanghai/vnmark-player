@@ -9,11 +9,12 @@ import {
 } from '../engine';
 import { Package } from '../package';
 import { Transition } from '../transition';
-import { Entries } from '../util';
+import { AnimatedText } from './AnimatedText';
 import {
   ImageElementResolvedProperties,
   resolveElementTransitionDuration,
   resolveElementValue,
+  TextElementResolvedProperties,
 } from './ElementResolvedProperties';
 import { ImageSprite } from './ImageSprite';
 import { SharedTransitionTicker } from './TransitionTicker';
@@ -29,33 +30,32 @@ export interface Element<Properties extends ElementProperties, Options> {
   snap(propertyMatcher: Matcher): void;
 }
 
-export interface ImageElementTransitionOptions {
-  figureIndex: number;
-  figureCount: number;
-}
-
-export class ImageElement
-  implements Element<ImageElementProperties, ImageElementTransitionOptions>
+export abstract class BaseElement<
+  Object,
+  Properties extends ElementProperties,
+  ResolvedProperties extends Record<string, unknown>,
+  Options,
+> implements Element<Properties, Options>
 {
-  private sprite: ImageSprite | undefined;
-  private properties: ImageElementProperties | undefined;
-  private options: ImageElementTransitionOptions | undefined;
+  private object: Object | undefined;
+  private properties: Properties | undefined;
+  private options: Options | undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private spriteTransitions = new MultiMap<ImageSprite, Transition<any>>();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private propertyTransitions = new MultiMap<string, Transition<any>>();
+  private objectTransitions = new MultiMap<Object, Transition<any>>();
+  private propertyTransitions = new MultiMap<
+    keyof ResolvedProperties,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Transition<any>
+  >();
 
-  constructor(
-    private package_: Package,
-    private container: Container,
-  ) {}
+  protected constructor(protected readonly isCrossfade: boolean) {}
 
   *transition(
-    properties: ImageElementProperties,
-    options: ImageElementTransitionOptions,
+    properties: Properties,
+    options: Options,
   ): Generator<Promise<unknown>, void, void> {
-    const oldSprite = this.sprite;
+    const oldObject = this.object;
     const oldProperties = this.properties;
     const oldOptions = this.options;
     const newProperties = properties;
@@ -70,122 +70,228 @@ export class ImageElement
       return;
     }
 
-    let newSprite: ImageSprite | undefined;
+    let newObject: Object | undefined;
     if (newValue && newValue !== oldValue) {
-      yield this.package_
-        .getBlob(newProperties.type, newValue)
-        .then(async blob => {
-          const blobUrl = URL.createObjectURL(blob);
-          try {
-            const newTexture = await Assets.load({
-              src: blobUrl,
-              loadParser: 'loadTextures',
-            });
-            newSprite = new ImageSprite(newTexture);
-          } finally {
-            URL.revokeObjectURL(blobUrl);
-          }
-        });
+      yield this.createObject(newProperties.type, newValue).then(it => {
+        newObject = it;
+      });
     } else {
       yield Promise.resolve();
     }
 
-    let oldSpriteOldProperties: ImageElementResolvedProperties | undefined;
-    let oldSpriteNewProperties: ImageElementResolvedProperties | undefined;
-    if (oldSprite) {
-      oldSpriteOldProperties = this.resolveProperties(
+    let oldObjectOldProperties: ResolvedProperties | undefined;
+    let oldObjectNewProperties: ResolvedProperties | undefined;
+    if (oldObject) {
+      oldObjectOldProperties = this.resolveProperties(
         oldProperties!,
-        oldSprite,
+        oldObject,
         oldValue,
         oldOptions!,
       );
-      oldSpriteNewProperties = newValue
-        ? this.resolveProperties(newProperties, oldSprite, newValue, newOptions)
-        : this.resolveProperties(
-            oldProperties!,
-            oldSprite,
-            newValue,
-            oldOptions!,
-          );
+      oldObjectNewProperties = this.resolveProperties(
+        this.isCrossfade && newValue ? newProperties : oldProperties!,
+        oldObject,
+        newValue,
+        this.isCrossfade && newValue ? newOptions : oldOptions!,
+      );
     }
-    let newSpriteOldProperties: ImageElementResolvedProperties | undefined;
-    let newSpriteNewProperties: ImageElementResolvedProperties | undefined;
-    if (newSprite) {
-      newSpriteOldProperties = oldValue
-        ? this.resolveProperties(
-            oldProperties!,
-            newSprite,
-            oldValue,
-            oldOptions!,
-          )
-        : this.resolveProperties(
-            newProperties,
-            newSprite,
-            oldValue,
-            newOptions,
-          );
-      newSpriteNewProperties = this.resolveProperties(
+    let newObjectOldProperties: ResolvedProperties | undefined;
+    let newObjectNewProperties: ResolvedProperties | undefined;
+    if (newObject) {
+      newObjectOldProperties = this.resolveProperties(
+        this.isCrossfade && oldValue ? oldProperties! : newProperties,
+        newObject,
+        oldValue,
+        this.isCrossfade && oldValue ? oldOptions! : newOptions,
+      );
+      newObjectNewProperties = this.resolveProperties(
         newProperties,
-        newSprite,
+        newObject,
         newValue,
         newOptions,
       );
     }
 
-    if (newSprite) {
+    if (newObject) {
       for (const [propertyName, propertyValue] of Object.entries(
-        newSpriteOldProperties!,
-      ) as Entries<ImageElementResolvedProperties>) {
-        newSprite.setPropertyValue(propertyName, propertyValue);
+        newObjectOldProperties!,
+      )) {
+        this.setPropertyValue(
+          newObject,
+          propertyName,
+          propertyValue as ResolvedProperties[typeof propertyName],
+        );
       }
-      this.container.addChild(newSprite);
+      this.attachObject(newObject);
     }
 
+    const oldObjectTransitionDuration = oldObject
+      ? resolveElementTransitionDuration(
+          newProperties,
+          this.getTransitionElementCount(oldObject, false),
+        )
+      : 0;
+    const newObjectTransitionDelay = this.isCrossfade
+      ? oldObjectTransitionDuration
+      : 0;
+    const newObjectTransitionDuration = newObject
+      ? resolveElementTransitionDuration(
+          newProperties,
+          this.getTransitionElementCount(newObject, true),
+        )
+      : 0;
+
     const propertyNames = Object.keys(
-      (oldSpriteOldProperties ?? newSpriteNewProperties)!,
-    ) as [keyof ImageElementResolvedProperties];
-    const transitionDuration = resolveElementTransitionDuration(newProperties);
+      (oldObjectOldProperties ?? newObjectNewProperties)!,
+    ) as (keyof ResolvedProperties)[];
     for (const propertyName of propertyNames) {
-      const oldSpriteChanged =
-        oldSpriteOldProperties?.[propertyName] !==
-        oldSpriteNewProperties?.[propertyName];
-      const newSpriteChanged =
-        newSpriteOldProperties?.[propertyName] !==
-        newSpriteNewProperties?.[propertyName];
-      if (oldSpriteChanged || newSpriteChanged) {
+      const oldObjectChanged =
+        oldObjectOldProperties?.[propertyName] !==
+        oldObjectNewProperties?.[propertyName];
+      const newObjectChanged =
+        newObjectOldProperties?.[propertyName] !==
+        newObjectNewProperties?.[propertyName];
+      if (oldObjectChanged || newObjectChanged) {
         this.propertyTransitions.get(propertyName)?.forEach(it => it.end());
       }
 
-      if (oldSpriteChanged) {
-        this.transitionProperty(
-          oldSprite!,
+      if (oldObjectChanged) {
+        this.transitionPropertyValue(
+          oldObject!,
           propertyName,
-          oldSpriteNewProperties![propertyName],
-          transitionDuration,
+          oldObjectNewProperties![propertyName],
+          0,
+          oldObjectTransitionDuration,
         );
       }
-      if (newSpriteChanged) {
-        this.transitionProperty(
-          newSprite!,
+      if (newObjectChanged) {
+        this.transitionPropertyValue(
+          newObject!,
           propertyName,
-          newSpriteNewProperties![propertyName],
-          transitionDuration,
+          newObjectNewProperties![propertyName],
+          newObjectTransitionDelay,
+          newObjectTransitionDuration,
         );
       }
     }
 
     if (newValue) {
-      this.sprite = newSprite ?? oldSprite;
+      this.object = newObject ?? oldObject;
       this.properties = newProperties;
       this.options = newOptions;
     } else {
-      this.sprite = undefined;
+      this.object = undefined;
       this.properties = undefined;
       this.options = undefined;
     }
   }
 
-  private resolveProperties(
+  protected abstract resolveProperties(
+    properties: Properties,
+    object: Object,
+    currentValue: string | undefined,
+    options: Options,
+  ): ResolvedProperties;
+
+  protected abstract createObject(type: string, value: string): Promise<Object>;
+
+  protected abstract destroyObject(object: Object): void;
+
+  protected abstract attachObject(object: Object): void;
+
+  protected abstract detachObject(object: Object): void;
+
+  protected getTransitionElementCount(
+    _object: Object,
+    _isEnter: boolean,
+  ): number {
+    return 1;
+  }
+
+  protected abstract getPropertyValue(
+    object: Object,
+    propertyName: keyof ResolvedProperties,
+  ): ResolvedProperties[typeof propertyName];
+
+  protected abstract setPropertyValue(
+    object: Object,
+    propertyName: keyof ResolvedProperties,
+    propertyValue: ResolvedProperties[typeof propertyName],
+  ): void;
+
+  private transitionPropertyValue(
+    object: Object,
+    propertyName: keyof ResolvedProperties,
+    propertyValue: ResolvedProperties[typeof propertyName],
+    transitionDelay: number,
+    transitionDuration: number,
+  ) {
+    const currentPropertyValue = this.getPropertyValue(object, propertyName);
+    const transition = new Transition(
+      currentPropertyValue,
+      propertyValue,
+      transitionDuration,
+    )
+      .setDelay(transitionDelay)
+      .addOnUpdateCallback(it =>
+        this.setPropertyValue(object, propertyName, it),
+      )
+      .addOnEndCallback(() => {
+        this.objectTransitions.remove(object, transition);
+        this.propertyTransitions.remove(propertyName, transition);
+        SharedTransitionTicker.remove(transition);
+        if (propertyName === 'value' && propertyValue === 0) {
+          this.objectTransitions.get(object)?.forEach(it => it.end());
+          this.detachObject(object);
+          this.destroyObject(object);
+          // TODO: Remove this element if there's no object?
+        }
+      });
+    this.objectTransitions.set(object, transition);
+    this.propertyTransitions.set(propertyName, transition);
+    SharedTransitionTicker.add(transition);
+    transition.start();
+  }
+
+  wait(propertyMatcher: Matcher): Promise<void> {
+    return Promise.all(
+      Array.from(this.propertyTransitions.entries())
+        .filter(it => propertyMatcher.match(it[0] as string))
+        .map(it => it[1].asPromise()),
+    ).then(() => {});
+  }
+
+  snap(propertyMatcher: Matcher) {
+    for (const [
+      propertyName,
+      transition,
+    ] of this.propertyTransitions.entries()) {
+      if (propertyMatcher.match(propertyName as string)) {
+        transition.end();
+      }
+    }
+  }
+}
+
+export interface ImageElementTransitionOptions {
+  figureIndex: number;
+  figureCount: number;
+}
+
+export class ImageElement extends BaseElement<
+  ImageSprite,
+  ImageElementProperties,
+  ImageElementResolvedProperties,
+  ImageElementTransitionOptions
+> {
+  constructor(
+    private readonly package_: Package,
+    private readonly container: Container,
+  ) {
+    super(true);
+  }
+
+  protected resolveProperties(
     properties: ImageElementProperties,
     sprite: ImageSprite,
     currentValue: string | undefined,
@@ -204,217 +310,116 @@ export class ImageElement
     });
   }
 
-  private transitionProperty(
-    sprite: ImageSprite,
+  protected async createObject(
+    type: string,
+    value: string,
+  ): Promise<ImageSprite> {
+    const blob = await this.package_.getBlob(type, value);
+    const blobUrl = URL.createObjectURL(blob);
+    try {
+      const texture = await Assets.load({
+        src: blobUrl,
+        loadParser: 'loadTextures',
+      });
+      return new ImageSprite(texture);
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  }
+
+  protected destroyObject(object: ImageSprite) {
+    object.destroy(true);
+  }
+
+  protected attachObject(object: ImageSprite) {
+    this.container.addChild(object);
+  }
+
+  protected detachObject(object: ImageSprite) {
+    object.removeFromParent();
+  }
+
+  protected getPropertyValue(
+    object: ImageSprite,
+    propertyName: keyof ImageElementResolvedProperties,
+  ): ImageElementResolvedProperties[typeof propertyName] {
+    return object.getPropertyValue(propertyName);
+  }
+
+  protected setPropertyValue(
+    object: ImageSprite,
     propertyName: keyof ImageElementResolvedProperties,
     propertyValue: ImageElementResolvedProperties[typeof propertyName],
-    transitionDuration: number,
   ) {
-    const currentPropertyValue = sprite.getPropertyValue(propertyName);
-    const transition = new Transition(
-      currentPropertyValue,
-      propertyValue,
-      transitionDuration,
-    )
-      .addOnUpdateCallback(it => sprite.setPropertyValue(propertyName, it))
-      .addOnEndCallback(() => {
-        this.spriteTransitions.remove(sprite, transition);
-        this.propertyTransitions.remove(propertyName, transition);
-        SharedTransitionTicker.remove(transition);
-        if (propertyName === 'value' && propertyValue === 0) {
-          this.spriteTransitions.get(sprite)?.forEach(it => it.end());
-          sprite.removeFromParent();
-          sprite.destroy(true);
-          // TODO: Remove this element if there's no sprite?
-        }
-      });
-    this.spriteTransitions.set(sprite, transition);
-    this.propertyTransitions.set(propertyName, transition);
-    SharedTransitionTicker.add(transition);
-    transition.start();
-  }
-
-  wait(propertyMatcher: Matcher): Promise<void> {
-    return Promise.all(
-      Array.from(this.propertyTransitions.entries())
-        .filter(it => propertyMatcher.match(it[0]))
-        .map(it => it[1].asPromise()),
-    ).then(() => {});
-  }
-
-  snap(propertyMatcher: Matcher) {
-    for (const [
-      propertyName,
-      transition,
-    ] of this.propertyTransitions.entries()) {
-      if (propertyMatcher.match(propertyName)) {
-        transition.end();
-      }
-    }
+    object.setPropertyValue(propertyName, propertyValue);
   }
 }
 
-export class NameTextElement
-  implements Element<TextElementProperties, unknown>
-{
-  private properties: TextElementProperties | undefined;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private propertyTransitions = new Map<string, Transition<any>>();
-
+export class TextElement extends BaseElement<
+  AnimatedText,
+  TextElementProperties,
+  TextElementResolvedProperties,
+  unknown
+> {
   constructor(
-    // @ts-expect-error TS6138
-    private package_: Package,
-    private element: HTMLElement,
-  ) {}
+    private readonly package_: Package,
+    private readonly element: HTMLElement,
+    private readonly enterByGraphemeCluster: boolean,
+  ) {
+    super(false);
+  }
 
-  *transition(
+  protected resolveProperties(
     properties: TextElementProperties,
-  ): Generator<Promise<unknown>, void, void> {
-    const oldProperties = this.properties;
-    const newProperties = properties;
-
-    const oldValue = oldProperties
-      ? resolveElementValue(oldProperties)
-      : undefined;
-    const newValue = resolveElementValue(newProperties);
-    if (oldValue === newValue) {
-      yield Promise.resolve();
-      return;
-    }
-
-    // TODO: Load translations.
-    const text = newValue ?? '';
-    yield Promise.resolve();
-
-    // TODO: Defend against XSS.
-    this.element.innerHTML = text;
-
-    this.properties = newValue !== undefined ? newProperties : undefined;
+    _object: AnimatedText,
+    currentValue: string | undefined,
+    _options: unknown,
+  ): TextElementResolvedProperties {
+    return TextElementResolvedProperties.resolve(properties, { currentValue });
   }
 
-  wait(propertyMatcher: Matcher): Promise<void> {
-    return Promise.all(
-      Array.from(this.propertyTransitions.entries())
-        .filter(it => propertyMatcher.match(it[0]))
-        .map(it => it[1].asPromise()),
-    ).then(() => {});
-  }
-
-  snap(propertyMatcher: Matcher) {
-    for (const [
-      propertyName,
-      transition,
-    ] of this.propertyTransitions.entries()) {
-      if (propertyMatcher.match(propertyName)) {
-        transition.end();
-      }
-    }
-  }
-}
-
-export class TextTextElement
-  implements Element<TextElementProperties, unknown>
-{
-  private properties: TextElementProperties | undefined;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private propertyTransitions = new Map<string, Transition<any>>();
-
-  constructor(
-    private package_: Package,
-    private element: HTMLElement,
-  ) {}
-
-  *transition(
-    properties: TextElementProperties,
-  ): Generator<Promise<unknown>, void, void> {
-    const oldProperties = this.properties;
-    const newProperties = properties;
-
-    const oldValue = oldProperties
-      ? resolveElementValue(oldProperties)
-      : undefined;
-    const newValue = resolveElementValue(newProperties);
-    if (oldValue === newValue) {
-      yield Promise.resolve();
-      return;
-    }
-
-    // TODO: Load translations.
-    const text = newValue ?? '';
-    yield Promise.resolve();
-
-    this.propertyTransitions.get('value')?.end();
-    if (!text) {
-      this.element.innerHTML = '';
-      return;
-    }
-    // TODO: Defend against XSS.
-    this.element.innerHTML = text;
-    const textNodeIterator = document.createNodeIterator(
-      this.element,
-      NodeFilter.SHOW_TEXT,
+  protected async createObject(
+    _type: string,
+    value: string,
+  ): Promise<AnimatedText> {
+    return new AnimatedText(
+      value,
+      this.package_.manifest.locale,
+      this.enterByGraphemeCluster,
     );
-    const textNodes = [];
-    while (textNodeIterator.nextNode()) {
-      textNodes.push(textNodeIterator.referenceNode as Text);
-    }
-    const segmenter = new Intl.Segmenter(this.package_.manifest.locale);
-    const spans: HTMLSpanElement[] = [];
-    for (const textNode of textNodes) {
-      const textSpans = [];
-      for (const { segment } of segmenter.segment(textNode.data)) {
-        const span = document.createElement('span');
-        span.textContent = segment;
-        textSpans.push(span);
-        spans.push(span);
-      }
-      textNode.replaceWith(...textSpans);
-    }
-
-    let transitionDuration = resolveElementTransitionDuration(properties);
-    if (transitionDuration === -1) {
-      transitionDuration = spans.length * 50;
-    }
-    const transition = new Transition(0, spans.length, transitionDuration)
-      .addOnUpdateCallback(it => {
-        for (let i = 0; i < spans.length; ++i) {
-          const opacity = Math.max(0, Math.min(it - i, 1));
-          if (opacity === 1) {
-            spans[i].removeAttribute('style');
-          } else {
-            spans[i].style.opacity = opacity.toString();
-          }
-        }
-      })
-      .addOnEndCallback(() => {
-        this.propertyTransitions.delete('value');
-        SharedTransitionTicker.remove(transition);
-      });
-    this.propertyTransitions.set('value', transition);
-    SharedTransitionTicker.add(transition);
-    transition.start();
-
-    this.properties = newValue !== undefined ? newProperties : undefined;
   }
 
-  wait(propertyMatcher: Matcher): Promise<void> {
-    return Promise.all(
-      Array.from(this.propertyTransitions.entries())
-        .filter(it => propertyMatcher.match(it[0]))
-        .map(it => it[1].asPromise()),
-    ).then(() => {});
+  protected destroyObject(_object: AnimatedText) {}
+
+  protected attachObject(object: AnimatedText) {
+    this.element.appendChild(object.element);
   }
 
-  snap(propertyMatcher: Matcher) {
-    for (const [
-      propertyName,
-      transition,
-    ] of this.propertyTransitions.entries()) {
-      if (propertyMatcher.match(propertyName)) {
-        transition.end();
-      }
-    }
+  protected detachObject(object: AnimatedText) {
+    object.element.remove();
+  }
+
+  protected getTransitionElementCount(
+    object: AnimatedText,
+    isEnter: boolean,
+  ): number {
+    return isEnter && this.enterByGraphemeCluster
+      ? object.transitionElementCount
+      : 1;
+  }
+
+  protected getPropertyValue(
+    object: AnimatedText,
+    propertyName: keyof TextElementResolvedProperties,
+  ): TextElementResolvedProperties[typeof propertyName] {
+    return object.getPropertyValue(propertyName);
+  }
+
+  protected setPropertyValue(
+    object: AnimatedText,
+    propertyName: keyof TextElementResolvedProperties,
+    propertyValue: TextElementResolvedProperties[typeof propertyName],
+  ) {
+    object.setPropertyValue(propertyName, propertyValue);
   }
 }

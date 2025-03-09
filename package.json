@@ -15,6 +15,7 @@
     "@preact/signals-react": "^3.0.0",
     "@zip.js/zip.js": "^2.7.54",
     "bezier-easing": "^2.1.0",
+    "dompurify": "^3.2.4",
     "immer": "^10.1.1",
     "minimatch": "^10.0.1",
     "mnemonist": "^0.40.2",
