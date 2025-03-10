@@ -43,14 +43,14 @@ export abstract class BaseElement<
   private options: Options | undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private objectTransitions = new MultiMap<Object, Transition<any>>();
-  private propertyTransitions = new MultiMap<
+  private readonly objectTransitions = new MultiMap<Object, Transition<any>>();
+  private readonly propertyTransitions = new MultiMap<
     keyof ResolvedProperties,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Transition<any>
   >();
 
-  protected constructor(protected readonly isCrossfade: boolean) {}
+  protected constructor(private readonly crossFade: boolean) {}
 
   *transition(
     properties: Properties,
@@ -90,20 +90,20 @@ export abstract class BaseElement<
         oldOptions!,
       );
       oldObjectNewProperties = this.resolveProperties(
-        this.isCrossfade && newValue ? newProperties : oldProperties!,
+        this.crossFade && newValue ? newProperties : oldProperties!,
         oldObject,
         oldValue !== newValue,
-        this.isCrossfade && newValue ? newOptions : oldOptions!,
+        this.crossFade && newValue ? newOptions : oldOptions!,
       );
     }
     let newObjectOldProperties: ResolvedProperties | undefined;
     let newObjectNewProperties: ResolvedProperties | undefined;
     if (newObject) {
       newObjectOldProperties = this.resolveProperties(
-        this.isCrossfade && oldValue ? oldProperties! : newProperties,
+        this.crossFade && oldValue ? oldProperties! : newProperties,
         newObject,
         oldValue !== newValue,
-        this.isCrossfade && oldValue ? oldOptions! : newOptions,
+        this.crossFade && oldValue ? oldOptions! : newOptions,
       );
       newObjectNewProperties = this.resolveProperties(
         newProperties,
@@ -132,9 +132,9 @@ export abstract class BaseElement<
           this.getTransitionElementCount(oldObject, false),
         )
       : 0;
-    const newObjectTransitionDelay = this.isCrossfade
-      ? oldObjectTransitionDuration
-      : 0;
+    const newObjectTransitionDelay = this.crossFade
+      ? 0
+      : oldObjectTransitionDuration;
     const newObjectTransitionDuration = newObject
       ? resolveElementTransitionDuration(
           newProperties,
@@ -366,11 +366,20 @@ export class DOMImageElement extends BaseElement<
   ImageElementResolvedProperties,
   ImageElementTransitionOptions
 > {
+  private readonly layer;
+
   constructor(
     private readonly package_: Package,
-    private readonly container: HTMLElement,
+    container: HTMLElement,
   ) {
     super(true);
+
+    const layer = document.createElement('div');
+    layer.style.position = 'absolute';
+    layer.style.inset = '0';
+    layer.style.isolation = 'isolate';
+    container.appendChild(layer);
+    this.layer = layer;
   }
 
   protected resolveProperties(
@@ -409,7 +418,7 @@ export class DOMImageElement extends BaseElement<
   protected destroyObject(_object: DOMImage) {}
 
   protected attachObject(object: DOMImage) {
-    this.container.appendChild(object.element);
+    this.layer.appendChild(object.element);
   }
 
   protected detachObject(object: DOMImage) {

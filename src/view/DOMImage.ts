@@ -23,7 +23,13 @@ export class DOMImage {
   constructor(readonly density: number) {
     const element = document.createElement('img');
     element.style.position = 'absolute';
+    element.style.transformOrigin = '0 0';
+    element.style.mixBlendMode = 'plus-lighter';
     this.element = element;
+    this.updateTransform();
+    this.updateLeft();
+    this.updateTop();
+    this.updateOpacity();
   }
 
   loadImage(url: string): Promise<void> {
@@ -62,7 +68,11 @@ export class DOMImage {
 
   set positionX(value: number) {
     this._positionX = value;
-    this.element.style.left = `${value / this.density}px`;
+    this.updateLeft();
+  }
+
+  private updateLeft() {
+    this.element.style.left = `${this._positionX / this.density}px`;
   }
 
   get positionY(): number {
@@ -71,7 +81,11 @@ export class DOMImage {
 
   set positionY(value: number) {
     this._positionY = value;
-    this.element.style.top = `${value / this.density}px`;
+    this.updateTop();
+  }
+
+  private updateTop() {
+    this.element.style.top = `${this._positionY / this.density}px`;
   }
 
   get offsetX(): number {
