@@ -59,9 +59,9 @@ export class ImageSprite extends Sprite {
 
   set offset(value: PointData | number) {
     if (typeof value === 'number') {
-      this.pivot.set(value);
+      this._offset.set(value);
     } else {
-      this.pivot.copyFrom(value);
+      this._offset.copyFrom(value);
     }
   }
 
