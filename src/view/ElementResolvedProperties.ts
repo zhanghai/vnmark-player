@@ -93,7 +93,7 @@ export interface ImageElementResolvedProperties {
 
 export namespace ImageElementResolvedProperties {
   export interface ResolveOptions {
-    currentValue: string | undefined;
+    valueChanged: boolean;
     density: number;
     screenWidth: number;
     screenHeight: number;
@@ -101,14 +101,15 @@ export namespace ImageElementResolvedProperties {
     imageHeight: number;
     figureIndex: number;
     figureCount: number;
+    avatarPositionX: number;
+    avatarPositionY: number;
   }
 
   export function resolve(
     properties: ImageElementProperties,
     options: ResolveOptions,
   ): ImageElementResolvedProperties {
-    const value =
-      resolveElementValue(properties) === options.currentValue ? 1 : 0;
+    const value = options.valueChanged ? 0 : 1;
     const anchorX =
       resolvePropertyValue(
         properties.anchorX,
@@ -125,6 +126,23 @@ export namespace ImageElementResolvedProperties {
           LengthValue.resolve(it, options.density) ??
           PercentageValue.resolve(it, options.imageHeight),
       ) ?? (properties.type === 'figure' ? options.imageHeight : 0);
+    let defaultPositionX;
+    let defaultPositionY;
+    switch (properties.type) {
+      case 'figure':
+        defaultPositionX =
+          (options.figureIndex / (options.figureCount + 1)) *
+          options.screenWidth;
+        defaultPositionY = options.screenHeight;
+        break;
+      case 'avatar':
+        defaultPositionX = options.avatarPositionX;
+        defaultPositionY = options.avatarPositionY;
+        break;
+      default:
+        defaultPositionX = 0;
+        defaultPositionY = 0;
+    }
     const positionX =
       resolvePropertyValue(
         properties.positionX,
@@ -132,11 +150,7 @@ export namespace ImageElementResolvedProperties {
           ZeroValue.resolve(it) ??
           LengthValue.resolve(it, options.density) ??
           PercentageValue.resolve(it, options.screenWidth),
-      ) ??
-      (properties.type === 'figure'
-        ? (options.figureIndex / (options.figureCount + 1)) *
-          options.screenWidth
-        : 0);
+      ) ?? defaultPositionX;
     const positionY =
       resolvePropertyValue(
         properties.positionY,
@@ -144,7 +158,7 @@ export namespace ImageElementResolvedProperties {
           ZeroValue.resolve(it) ??
           LengthValue.resolve(it, options.density) ??
           PercentageValue.resolve(it, options.screenHeight),
-      ) ?? (properties.type === 'figure' ? options.screenHeight : 0);
+      ) ?? defaultPositionY;
     const offsetX =
       resolvePropertyValue(
         properties.offsetX,
@@ -233,15 +247,14 @@ export interface TextElementResolvedProperties {
 
 export namespace TextElementResolvedProperties {
   export interface ResolveOptions {
-    currentValue: string | undefined;
+    valueChanged: boolean;
   }
 
   export function resolve(
-    properties: TextElementProperties,
+    _properties: TextElementProperties,
     options: ResolveOptions,
   ): TextElementResolvedProperties {
-    const value =
-      resolveElementValue(properties) === options.currentValue ? 1 : 0;
+    const value = options.valueChanged ? 0 : 1;
     return { value };
   }
 }

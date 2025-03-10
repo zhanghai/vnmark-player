@@ -10,6 +10,7 @@ import {
 import { Package } from '../package';
 import { Transition } from '../transition';
 import { AnimatedText } from './AnimatedText';
+import { DOMImage } from './DOMImage';
 import {
   ImageElementResolvedProperties,
   resolveElementTransitionDuration,
@@ -85,13 +86,13 @@ export abstract class BaseElement<
       oldObjectOldProperties = this.resolveProperties(
         oldProperties!,
         oldObject,
-        oldValue,
+        false,
         oldOptions!,
       );
       oldObjectNewProperties = this.resolveProperties(
         this.isCrossfade && newValue ? newProperties : oldProperties!,
         oldObject,
-        newValue,
+        oldValue !== newValue,
         this.isCrossfade && newValue ? newOptions : oldOptions!,
       );
     }
@@ -101,13 +102,13 @@ export abstract class BaseElement<
       newObjectOldProperties = this.resolveProperties(
         this.isCrossfade && oldValue ? oldProperties! : newProperties,
         newObject,
-        oldValue,
+        oldValue !== newValue,
         this.isCrossfade && oldValue ? oldOptions! : newOptions,
       );
       newObjectNewProperties = this.resolveProperties(
         newProperties,
         newObject,
-        newValue,
+        false,
         newOptions,
       );
     }
@@ -189,7 +190,7 @@ export abstract class BaseElement<
   protected abstract resolveProperties(
     properties: Properties,
     object: Object,
-    currentValue: string | undefined,
+    valueChanged: boolean,
     options: Options,
   ): ResolvedProperties;
 
@@ -276,9 +277,11 @@ export abstract class BaseElement<
 export interface ImageElementTransitionOptions {
   figureIndex: number;
   figureCount: number;
+  avatarPositionX: number;
+  avatarPositionY: number;
 }
 
-export class ImageElement extends BaseElement<
+export class PixiImageElement extends BaseElement<
   ImageSprite,
   ImageElementProperties,
   ImageElementResolvedProperties,
@@ -293,20 +296,22 @@ export class ImageElement extends BaseElement<
 
   protected resolveProperties(
     properties: ImageElementProperties,
-    sprite: ImageSprite,
-    currentValue: string | undefined,
+    object: ImageSprite,
+    valueChanged: boolean,
     options: ImageElementTransitionOptions,
   ): ImageElementResolvedProperties {
     const manifest = this.package_.manifest;
     return ImageElementResolvedProperties.resolve(properties, {
-      currentValue,
+      valueChanged,
       density: manifest.density,
       screenWidth: manifest.width,
       screenHeight: manifest.height,
-      imageWidth: sprite.width,
-      imageHeight: sprite.height,
+      imageWidth: object.texture.width,
+      imageHeight: object.texture.height,
       figureIndex: options.figureIndex,
       figureCount: options.figureCount,
+      avatarPositionX: options.avatarPositionX,
+      avatarPositionY: options.avatarPositionY,
     });
   }
 
@@ -355,6 +360,78 @@ export class ImageElement extends BaseElement<
   }
 }
 
+export class DOMImageElement extends BaseElement<
+  DOMImage,
+  ImageElementProperties,
+  ImageElementResolvedProperties,
+  ImageElementTransitionOptions
+> {
+  constructor(
+    private readonly package_: Package,
+    private readonly container: HTMLElement,
+  ) {
+    super(true);
+  }
+
+  protected resolveProperties(
+    properties: ImageElementProperties,
+    object: DOMImage,
+    valueChanged: boolean,
+    options: ImageElementTransitionOptions,
+  ): ImageElementResolvedProperties {
+    const manifest = this.package_.manifest;
+    return ImageElementResolvedProperties.resolve(properties, {
+      valueChanged,
+      density: manifest.density,
+      screenWidth: manifest.width,
+      screenHeight: manifest.height,
+      imageWidth: object.element.naturalWidth,
+      imageHeight: object.element.naturalHeight,
+      figureIndex: options.figureIndex,
+      figureCount: options.figureCount,
+      avatarPositionX: options.avatarPositionX,
+      avatarPositionY: options.avatarPositionY,
+    });
+  }
+
+  protected async createObject(type: string, value: string): Promise<DOMImage> {
+    const blob = await this.package_.getBlob(type, value);
+    const blobUrl = URL.createObjectURL(blob);
+    try {
+      const image = new DOMImage(this.package_.manifest.density);
+      await image.loadImage(blobUrl);
+      return image;
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  }
+
+  protected destroyObject(_object: DOMImage) {}
+
+  protected attachObject(object: DOMImage) {
+    this.container.appendChild(object.element);
+  }
+
+  protected detachObject(object: DOMImage) {
+    object.element.remove();
+  }
+
+  protected getPropertyValue(
+    object: DOMImage,
+    propertyName: keyof ImageElementResolvedProperties,
+  ): ImageElementResolvedProperties[typeof propertyName] {
+    return object.getPropertyValue(propertyName);
+  }
+
+  protected setPropertyValue(
+    object: DOMImage,
+    propertyName: keyof ImageElementResolvedProperties,
+    propertyValue: ImageElementResolvedProperties[typeof propertyName],
+  ) {
+    object.setPropertyValue(propertyName, propertyValue);
+  }
+}
+
 export class TextElement extends BaseElement<
   AnimatedText,
   TextElementProperties,
@@ -363,7 +440,7 @@ export class TextElement extends BaseElement<
 > {
   constructor(
     private readonly package_: Package,
-    private readonly element: HTMLElement,
+    private readonly container: HTMLElement,
     private readonly enterByGraphemeCluster: boolean,
   ) {
     super(false);
@@ -372,10 +449,10 @@ export class TextElement extends BaseElement<
   protected resolveProperties(
     properties: TextElementProperties,
     _object: AnimatedText,
-    currentValue: string | undefined,
+    valueChanged: boolean,
     _options: unknown,
   ): TextElementResolvedProperties {
-    return TextElementResolvedProperties.resolve(properties, { currentValue });
+    return TextElementResolvedProperties.resolve(properties, { valueChanged });
   }
 
   protected async createObject(
@@ -392,7 +469,7 @@ export class TextElement extends BaseElement<
   protected destroyObject(_object: AnimatedText) {}
 
   protected attachObject(object: AnimatedText) {
-    this.element.appendChild(object.element);
+    this.container.appendChild(object.element);
   }
 
   protected detachObject(object: AnimatedText) {

@@ -216,7 +216,6 @@ export namespace Property {
               );
               break;
             case 'pivot_x':
-              console.log(type, propertyName, propertyValue);
               name = 'pivotX';
               value = parsePropertyValue(
                 propertyName,

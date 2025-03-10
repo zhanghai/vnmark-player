@@ -2,9 +2,10 @@ import { Application } from 'pixi.js';
 
 import { ElementProperties, Engine, UpdateViewOptions } from '../engine';
 import {
+  DOMImageElement,
   Element,
-  ImageElement,
   ImageElementTransitionOptions,
+  PixiImageElement,
   TextElement,
 } from './Element';
 import { resolveElementValue } from './ElementResolvedProperties';
@@ -19,6 +20,8 @@ export class View {
   private pixiApplication!: Application;
   private dialogueElement!: HTMLElement;
   private dialogueAvatarElement!: HTMLElement;
+  private dialogueAvatarPositionX!: number;
+  private dialogueAvatarPositionY!: number;
   private dialogueNameElement!: HTMLElement;
   private dialogueTextElement!: HTMLElement;
   private debugElement!: HTMLElement;
@@ -57,9 +60,30 @@ export class View {
       'dialogue',
     )[0] as HTMLElement;
     this.dialogueElement = dialogueElement;
-    this.dialogueAvatarElement = dialogueElement.getElementsByClassName(
+    const dialogueAvatarElement = dialogueElement.getElementsByClassName(
       'avatar',
     )[0] as HTMLElement;
+    this.dialogueAvatarElement = dialogueAvatarElement;
+    const dialogueAvatarPaddingLeft = dialogueAvatarElement.style.paddingLeft;
+    const dialogueAvatarPositionX = Number.parseFloat(
+      dialogueAvatarElement.style.paddingLeft.replace(/px$/, ''),
+    );
+    if (Number.isNaN(dialogueAvatarPositionX)) {
+      throw new ViewError(
+        `Cannot parse dialogue avatar padding-left "${dialogueAvatarPaddingLeft}"`,
+      );
+    }
+    this.dialogueAvatarPositionX = dialogueAvatarPositionX;
+    const dialogueAvatarPaddingTop = dialogueAvatarElement.style.paddingTop;
+    const dialogueAvatarPositionY = Number.parseFloat(
+      dialogueAvatarElement.style.paddingTop.replace(/px$/, ''),
+    );
+    if (Number.isNaN(dialogueAvatarPositionY)) {
+      throw new ViewError(
+        `Cannot parse dialogue avatar padding-top "${dialogueAvatarPaddingTop}"`,
+      );
+    }
+    this.dialogueAvatarPositionY = dialogueAvatarPositionY;
     this.dialogueNameElement = dialogueElement.getElementsByClassName(
       'name',
     )[0] as HTMLElement;
@@ -124,6 +148,8 @@ export class View {
       const imageElementTransitionOptions: ImageElementTransitionOptions = {
         figureIndex,
         figureCount,
+        avatarPositionX: this.dialogueAvatarPositionX,
+        avatarPositionY: this.dialogueAvatarPositionY,
       };
 
       let element = this.elements.get(elementName);
@@ -149,10 +175,15 @@ export class View {
           case 'background':
           case 'foreground':
           case 'figure':
-          case 'avatar':
-            element = new ImageElement(
+            element = new PixiImageElement(
               this.engine.package_,
               this.pixiApplication.stage,
+            );
+            break;
+          case 'avatar':
+            element = new DOMImageElement(
+              this.engine.package_,
+              this.dialogueAvatarElement,
             );
             break;
           case 'music':
@@ -206,6 +237,7 @@ export class View {
       undefined,
       '    ',
     ).replace(/\n {12}( {4}|(?=}))/g, ' ');
+
     switch (options.type) {
       case 'pause':
         return new Promise(resolve => {
