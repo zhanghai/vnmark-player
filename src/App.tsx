@@ -45,6 +45,27 @@ function App() {
           style={{ position: 'absolute', width: '100%', height: '100%' }}
         />
         <div
+          className="background"
+          style={{
+            position: 'absolute',
+            inset: 0,
+          }}
+        />
+        <div
+          className="figure"
+          style={{
+            position: 'absolute',
+            inset: 0,
+          }}
+        />
+        <div
+          className="foreground"
+          style={{
+            position: 'absolute',
+            inset: 0,
+          }}
+        />
+        <div
           className="dialogue"
           style={{
             position: 'absolute',

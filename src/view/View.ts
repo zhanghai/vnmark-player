@@ -5,7 +5,6 @@ import {
   DOMImageElement,
   Element,
   ImageElementTransitionOptions,
-  PixiImageElement,
   TextElement,
 } from './Element';
 import { resolveElementValue } from './ElementResolvedProperties';
@@ -18,6 +17,9 @@ export class ViewError extends Error {
 
 export class View {
   private pixiApplication!: Application;
+  private backgroundElement!: HTMLElement;
+  private figureElement!: HTMLElement;
+  private foregroundElement!: HTMLElement;
   private dialogueElement!: HTMLElement;
   private dialogueAvatarElement!: HTMLElement;
   private dialogueAvatarPositionX!: number;
@@ -45,7 +47,11 @@ export class View {
       'canvas',
     )[0] as HTMLCanvasElement;
     const pixiApplication = new Application();
-    await pixiApplication.init({ canvas, sharedTicker: true });
+    await pixiApplication.init({
+      backgroundAlpha: 0,
+      canvas,
+      sharedTicker: true,
+    });
     // Not setting resolution in Pixi.js because we need to handle it manually for elements outside
     // Pixi.js anyway.
     const manifest = this.engine.package_.manifest;
@@ -56,6 +62,15 @@ export class View {
     pixiApplication.stage.eventMode = 'none';
     this.pixiApplication = pixiApplication;
 
+    this.backgroundElement = rootElement.getElementsByClassName(
+      'background',
+    )[0] as HTMLElement;
+    this.figureElement = rootElement.getElementsByClassName(
+      'figure',
+    )[0] as HTMLElement;
+    this.foregroundElement = rootElement.getElementsByClassName(
+      'foreground',
+    )[0] as HTMLElement;
     const dialogueElement = rootElement.getElementsByClassName(
       'dialogue',
     )[0] as HTMLElement;
@@ -173,11 +188,27 @@ export class View {
             // TODO
             continue;
           case 'background':
-          case 'foreground':
-          case 'figure':
-            element = new PixiImageElement(
+            element = new DOMImageElement(
               this.engine.package_,
-              this.pixiApplication.stage,
+              this.backgroundElement,
+            );
+            break;
+          case 'figure':
+            element = new DOMImageElement(
+              this.engine.package_,
+              this.figureElement,
+            );
+            break;
+          case 'foreground':
+            // Pixi.js doesn't support custom compositing operators like 'plus-lighter'.
+            // https://github.com/pixijs/pixijs/issues/11324
+            // element = new PixiImageElement(
+            //   this.engine.package_,
+            //   this.pixiApplication.stage,
+            // );
+            element = new DOMImageElement(
+              this.engine.package_,
+              this.foregroundElement,
             );
             break;
           case 'avatar':

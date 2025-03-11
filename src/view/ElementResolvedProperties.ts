@@ -36,8 +36,8 @@ export function resolveElementTransitionDuration(
     case 'background':
       defaultTransitionDuration = 1000;
       break;
-    case 'foreground':
     case 'figure':
+    case 'foreground':
     case 'avatar':
       defaultTransitionDuration = 500;
       break;

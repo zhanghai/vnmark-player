@@ -21,7 +21,7 @@ export interface BaseElementProperties {
 }
 
 export interface ImageElementProperties extends BaseElementProperties {
-  readonly type: 'background' | 'foreground' | 'figure' | 'avatar';
+  readonly type: 'background' | 'figure' | 'foreground' | 'avatar';
   readonly anchorX?: ZeroValue | LengthValue | PercentageValue;
   readonly anchorY?: ZeroValue | LengthValue | PercentageValue;
   readonly positionX?: ZeroValue | LengthValue | PercentageValue;
@@ -97,8 +97,8 @@ export namespace Property {
     let index: number | undefined;
     switch (type) {
       case 'background':
-      case 'foreground':
       case 'figure':
+      case 'foreground':
       case 'avatar':
       case 'name':
       case 'text':
@@ -145,8 +145,8 @@ export namespace Property {
     if (name === undefined) {
       switch (type) {
         case 'background':
-        case 'foreground':
         case 'figure':
+        case 'foreground':
         case 'avatar':
           switch (propertyName) {
             case 'anchor_x':
