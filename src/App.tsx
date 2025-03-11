@@ -69,6 +69,8 @@ function App() {
           style={{
             position: 'absolute',
             inset: 0,
+            fontSize: 26,
+            lineHeight: '1.5',
           }}>
           <div
             style={{
@@ -95,8 +97,6 @@ function App() {
               left: 266,
               top: 570,
               width: 78,
-              fontSize: 26,
-              lineHeight: '1.5',
             }}
           />
           <div
@@ -106,8 +106,6 @@ function App() {
               left: 340,
               top: 570,
               width: 600,
-              fontSize: 26,
-              lineHeight: '1.5',
             }}
           />
         </div>
