@@ -1,6 +1,8 @@
 import {
   AngleValue,
+  AudioElementProperties,
   BaseElementProperties,
+  BooleanValue,
   ImageElementProperties,
   LengthValue,
   NoneValue,
@@ -256,6 +258,40 @@ export namespace TextElementResolvedProperties {
   ): TextElementResolvedProperties {
     const value = options.valueChanged ? 0 : 1;
     return { value };
+  }
+}
+
+export interface AudioElementResolvedProperties {
+  readonly value: number;
+  readonly volume: number;
+  readonly loop: boolean;
+}
+
+export namespace AudioElementResolvedProperties {
+  export interface ResolveOptions {
+    valueChanged: boolean;
+  }
+
+  export function resolve(
+    properties: AudioElementProperties,
+    options: ResolveOptions,
+  ): AudioElementResolvedProperties {
+    const value = options.valueChanged ? 0 : 1;
+    const volume =
+      resolvePropertyValue(properties.volume, it => NumberValue.resolve(it)) ??
+      1;
+    let defaultLoop: boolean;
+    switch (properties.type) {
+      case 'music':
+        defaultLoop = true;
+        break;
+      default:
+        defaultLoop = false;
+    }
+    const loop =
+      resolvePropertyValue(properties.loop, it => BooleanValue.resolve(it)) ??
+      defaultLoop;
+    return { value, volume, loop };
   }
 }
 

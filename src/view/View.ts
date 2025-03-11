@@ -4,6 +4,7 @@ import {
   Element,
   ImageElementTransitionOptions,
   TextElement,
+  AudioElement,
 } from './Element';
 import { resolveElementValue } from './ElementResolvedProperties';
 import { Ticker } from './Ticker';
@@ -198,8 +199,8 @@ export class View {
           case 'music':
           case 'sound':
           case 'voice':
-            // TODO
-            continue;
+            element = new AudioElement(this.engine.package_, this.auralTicker);
+            break;
           case 'video':
             // TODO
             continue;

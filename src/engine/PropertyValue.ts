@@ -122,6 +122,14 @@ export namespace BooleanValue {
     }
     return { type: 'boolean', value };
   }
+
+  export function resolve(value: PropertyValue): boolean | undefined {
+    if (value.type === 'boolean') {
+      const boolean = value as BooleanValue;
+      return boolean.value;
+    }
+    return undefined;
+  }
 }
 
 export interface NumberValue extends PropertyValue {

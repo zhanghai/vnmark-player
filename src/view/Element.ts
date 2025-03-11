@@ -1,6 +1,7 @@
 import { MultiMap } from 'mnemonist';
 
 import {
+  AudioElementProperties,
   ElementProperties,
   ImageElementProperties,
   Matcher,
@@ -8,7 +9,9 @@ import {
 } from '../engine';
 import { Package } from '../package';
 import { Transition } from '../transition';
+import { AudioObject } from './AudioObject';
 import {
+  AudioElementResolvedProperties,
   ImageElementResolvedProperties,
   resolveElementTransitionDuration,
   resolveElementValue,
@@ -36,21 +39,24 @@ export abstract class BaseElement<
   Options,
 > implements Element<Properties, Options>
 {
-  private object: Object | undefined;
-  private properties: Properties | undefined;
-  private options: Options | undefined;
+  protected object: Object | undefined;
+  protected properties: Properties | undefined;
+  protected options: Options | undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private readonly objectTransitions = new MultiMap<Object, Transition<any>>();
-  private readonly propertyTransitions = new MultiMap<
+  protected readonly objectTransitions = new MultiMap<
+    Object,
+    Transition<any>
+  >();
+  protected readonly propertyTransitions = new MultiMap<
     keyof ResolvedProperties,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Transition<any>
   >();
 
   protected constructor(
-    private readonly ticker: Ticker,
-    private readonly crossFade: boolean,
+    protected readonly ticker: Ticker,
+    protected readonly crossFade: boolean,
   ) {}
 
   *transition(
@@ -154,7 +160,7 @@ export abstract class BaseElement<
         newObjectOldProperties?.[propertyName] !==
         newObjectNewProperties?.[propertyName];
       if (oldObjectChanged || newObjectChanged) {
-        this.propertyTransitions.get(propertyName)?.forEach(it => it.end());
+        this.propertyTransitions.get(propertyName)?.forEach(it => it.cancel());
       }
 
       if (oldObjectChanged) {
@@ -228,6 +234,11 @@ export abstract class BaseElement<
     transitionDelay: number,
     transitionDuration: number,
   ) {
+    // noinspection SuspiciousTypeOfGuard
+    if (typeof propertyValue !== 'number') {
+      this.setPropertyValue(object, propertyName, propertyValue);
+      return;
+    }
     const currentPropertyValue = this.getPropertyValue(object, propertyName);
     const transition = new Transition(
       currentPropertyValue,
@@ -243,7 +254,7 @@ export abstract class BaseElement<
         this.propertyTransitions.remove(propertyName, transition);
         this.ticker.removeCallback(transition);
         if (propertyName === 'value' && propertyValue === 0) {
-          this.objectTransitions.get(object)?.forEach(it => it.end());
+          this.objectTransitions.get(object)?.forEach(it => it.cancel());
           this.detachObject(object);
           this.destroyObject(object);
           // TODO: Remove this element if there's no object?
@@ -269,7 +280,7 @@ export abstract class BaseElement<
       transition,
     ] of this.propertyTransitions.entries()) {
       if (propertyMatcher.match(propertyName as string)) {
-        transition.end();
+        transition.cancel();
       }
     }
   }
@@ -336,7 +347,7 @@ export class ImageElement extends BaseElement<
     const blobUrl = URL.createObjectURL(blob);
     try {
       const image = new ImageObject(this.package_.manifest.density);
-      await image.loadImage(blobUrl);
+      await image.load(blobUrl);
       return image;
     } finally {
       URL.revokeObjectURL(blobUrl);
@@ -436,5 +447,96 @@ export class TextElement extends BaseElement<
     propertyValue: TextElementResolvedProperties[typeof propertyName],
   ) {
     object.setPropertyValue(propertyName, propertyValue);
+  }
+}
+
+export class AudioElement extends BaseElement<
+  AudioObject,
+  AudioElementProperties,
+  AudioElementResolvedProperties,
+  unknown
+> {
+  constructor(
+    private readonly package_: Package,
+    ticker: Ticker,
+  ) {
+    super(ticker, true);
+  }
+
+  protected resolveProperties(
+    properties: AudioElementProperties,
+    _object: AudioObject,
+    valueChanged: boolean,
+    _options: unknown,
+  ): AudioElementResolvedProperties {
+    return AudioElementResolvedProperties.resolve(properties, {
+      valueChanged,
+    });
+  }
+
+  protected async createObject(
+    type: string,
+    value: string,
+  ): Promise<AudioObject> {
+    const blob = await this.package_.getBlob(type, value);
+    const blobUrl = URL.createObjectURL(blob);
+    try {
+      const audio = new AudioObject();
+      await audio.load(blobUrl);
+      return audio;
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  }
+
+  protected destroyObject(object: AudioObject) {
+    object.howl.unload();
+  }
+
+  protected attachObject(object: AudioObject) {
+    object.howl.play();
+  }
+
+  protected detachObject(object: AudioObject) {
+    object.howl.stop();
+  }
+
+  protected getPropertyValue(
+    object: AudioObject,
+    propertyName: keyof AudioElementResolvedProperties,
+  ): AudioElementResolvedProperties[typeof propertyName] {
+    return object.getPropertyValue(propertyName);
+  }
+
+  protected setPropertyValue(
+    object: AudioObject,
+    propertyName: keyof AudioElementResolvedProperties,
+    propertyValue: AudioElementResolvedProperties[typeof propertyName],
+  ) {
+    object.setPropertyValue(propertyName, propertyValue);
+  }
+
+  wait(propertyMatcher: Matcher): Promise<void> {
+    const superPromise = super.wait(propertyMatcher);
+
+    const object = this.object;
+    if (object && propertyMatcher.match('playback')) {
+      const playbackPromise = object.createPlaybackPromise();
+      return Promise.all([superPromise, playbackPromise]).then(() => {});
+    } else {
+      return superPromise;
+    }
+  }
+
+  snap(propertyMatcher: Matcher) {
+    const object = this.object;
+    if (object && propertyMatcher.match('playback')) {
+      const howl = object.howl;
+      if (!howl.loop()) {
+        howl.stop();
+      }
+    }
+
+    super.snap(propertyMatcher);
   }
 }

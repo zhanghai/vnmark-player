@@ -134,6 +134,9 @@ export class Transition<ValueType> {
     this._isStarted = true;
     this.notifyCallbacks(this.onStartCallbacks);
 
+    // This also makes a zero duration transition end synchronously.
+    this.updateCurrentValue();
+
     return this;
   }
 
@@ -165,7 +168,7 @@ export class Transition<ValueType> {
     return this;
   }
 
-  end(snapToEnd: boolean = true): Transition<ValueType> {
+  cancel(snapToEnd: boolean = true): Transition<ValueType> {
     if (!this.isRunning) {
       return this;
     }
@@ -181,6 +184,9 @@ export class Transition<ValueType> {
   }
 
   get fraction(): number {
+    if (!this.duration) {
+      return 1;
+    }
     return Math.min(
       Math.max(0, (this.runningTime - this.delay) / this.duration),
       1,

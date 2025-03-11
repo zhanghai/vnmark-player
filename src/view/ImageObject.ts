@@ -32,13 +32,21 @@ export class ImageObject {
     this.updateOpacity();
   }
 
-  loadImage(url: string): Promise<void> {
+  load(url: string): Promise<void> {
     if (this.element.src) {
-      throw new ViewError();
+      throw new ViewError('Cannot reload an image object');
     }
     const promise = new Promise<void>((resolve, reject) => {
-      this.element.onload = () => resolve();
-      this.element.onerror = it => reject(it);
+      this.element.onload = () => {
+        this.element.onload = null;
+        this.element.onerror = null;
+        resolve();
+      };
+      this.element.onerror = event => {
+        this.element.onload = null;
+        this.element.onerror = null;
+        reject(event);
+      };
     });
     this.element.src = url;
     return promise;

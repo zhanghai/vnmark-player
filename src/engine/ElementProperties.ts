@@ -51,6 +51,7 @@ export interface ChoiceElementProperties extends TextElementProperties {
 export interface AudioElementProperties extends BaseElementProperties {
   readonly type: 'music' | 'sound' | 'voice';
   readonly volume?: NumberValue | PercentageValue;
+  readonly loop?: BooleanValue;
 }
 
 export interface VideoElementProperties extends BaseElementProperties {
