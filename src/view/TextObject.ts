@@ -5,7 +5,7 @@ import { ViewError } from './View';
 
 const ENTER_TRANSITION_WINDOW_SIZE = 5;
 
-export class AnimatedText {
+export class TextObject {
   public readonly element: HTMLDivElement;
   private readonly spans: HTMLSpanElement[];
 

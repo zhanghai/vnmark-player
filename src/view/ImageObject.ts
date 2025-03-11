@@ -1,7 +1,7 @@
 import { ImageElementResolvedProperties } from './ElementResolvedProperties';
 import { ViewError } from './View';
 
-export class DOMImage {
+export class ImageObject {
   public readonly element: HTMLImageElement;
 
   private _anchorX = 0;

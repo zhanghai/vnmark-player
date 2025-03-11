@@ -1,5 +1,4 @@
 import { MultiMap } from 'mnemonist';
-import { Assets, Container } from 'pixi.js';
 
 import {
   ElementProperties,
@@ -9,16 +8,15 @@ import {
 } from '../engine';
 import { Package } from '../package';
 import { Transition } from '../transition';
-import { AnimatedText } from './AnimatedText';
-import { DOMImage } from './DOMImage';
 import {
   ImageElementResolvedProperties,
   resolveElementTransitionDuration,
   resolveElementValue,
   TextElementResolvedProperties,
 } from './ElementResolvedProperties';
-import { ImageSprite } from './ImageSprite';
-import { SharedTransitionTicker } from './TransitionTicker';
+import { ImageObject } from './ImageObject';
+import { TextObject } from './TextObject';
+import { Ticker } from './Ticker';
 
 export interface Element<Properties extends ElementProperties, Options> {
   transition(
@@ -50,7 +48,10 @@ export abstract class BaseElement<
     Transition<any>
   >();
 
-  protected constructor(private readonly crossFade: boolean) {}
+  protected constructor(
+    private readonly ticker: Ticker,
+    private readonly crossFade: boolean,
+  ) {}
 
   *transition(
     properties: Properties,
@@ -240,7 +241,7 @@ export abstract class BaseElement<
       .addOnEndCallback(() => {
         this.objectTransitions.remove(object, transition);
         this.propertyTransitions.remove(propertyName, transition);
-        SharedTransitionTicker.remove(transition);
+        this.ticker.removeCallback(transition);
         if (propertyName === 'value' && propertyValue === 0) {
           this.objectTransitions.get(object)?.forEach(it => it.end());
           this.detachObject(object);
@@ -250,7 +251,7 @@ export abstract class BaseElement<
       });
     this.objectTransitions.set(object, transition);
     this.propertyTransitions.set(propertyName, transition);
-    SharedTransitionTicker.add(transition);
+    this.ticker.addCallback(transition, it => transition.update(it));
     transition.start();
   }
 
@@ -281,87 +282,8 @@ export interface ImageElementTransitionOptions {
   avatarPositionY: number;
 }
 
-export class PixiImageElement extends BaseElement<
-  ImageSprite,
-  ImageElementProperties,
-  ImageElementResolvedProperties,
-  ImageElementTransitionOptions
-> {
-  constructor(
-    private readonly package_: Package,
-    private readonly container: Container,
-  ) {
-    super(true);
-  }
-
-  protected resolveProperties(
-    properties: ImageElementProperties,
-    object: ImageSprite,
-    valueChanged: boolean,
-    options: ImageElementTransitionOptions,
-  ): ImageElementResolvedProperties {
-    const manifest = this.package_.manifest;
-    return ImageElementResolvedProperties.resolve(properties, {
-      valueChanged,
-      density: manifest.density,
-      screenWidth: manifest.width,
-      screenHeight: manifest.height,
-      imageWidth: object.texture.width,
-      imageHeight: object.texture.height,
-      figureIndex: options.figureIndex,
-      figureCount: options.figureCount,
-      avatarPositionX: options.avatarPositionX,
-      avatarPositionY: options.avatarPositionY,
-    });
-  }
-
-  protected async createObject(
-    type: string,
-    value: string,
-  ): Promise<ImageSprite> {
-    const blob = await this.package_.getBlob(type, value);
-    const blobUrl = URL.createObjectURL(blob);
-    try {
-      const texture = await Assets.load({
-        src: blobUrl,
-        loadParser: 'loadTextures',
-      });
-      return new ImageSprite(texture);
-    } finally {
-      URL.revokeObjectURL(blobUrl);
-    }
-  }
-
-  protected destroyObject(object: ImageSprite) {
-    object.destroy(true);
-  }
-
-  protected attachObject(object: ImageSprite) {
-    this.container.addChild(object);
-  }
-
-  protected detachObject(object: ImageSprite) {
-    object.removeFromParent();
-  }
-
-  protected getPropertyValue(
-    object: ImageSprite,
-    propertyName: keyof ImageElementResolvedProperties,
-  ): ImageElementResolvedProperties[typeof propertyName] {
-    return object.getPropertyValue(propertyName);
-  }
-
-  protected setPropertyValue(
-    object: ImageSprite,
-    propertyName: keyof ImageElementResolvedProperties,
-    propertyValue: ImageElementResolvedProperties[typeof propertyName],
-  ) {
-    object.setPropertyValue(propertyName, propertyValue);
-  }
-}
-
-export class DOMImageElement extends BaseElement<
-  DOMImage,
+export class ImageElement extends BaseElement<
+  ImageObject,
   ImageElementProperties,
   ImageElementResolvedProperties,
   ImageElementTransitionOptions
@@ -371,8 +293,9 @@ export class DOMImageElement extends BaseElement<
   constructor(
     private readonly package_: Package,
     container: HTMLElement,
+    ticker: Ticker,
   ) {
-    super(true);
+    super(ticker, true);
 
     const layer = document.createElement('div');
     layer.style.position = 'absolute';
@@ -386,7 +309,7 @@ export class DOMImageElement extends BaseElement<
 
   protected resolveProperties(
     properties: ImageElementProperties,
-    object: DOMImage,
+    object: ImageObject,
     valueChanged: boolean,
     options: ImageElementTransitionOptions,
   ): ImageElementResolvedProperties {
@@ -405,11 +328,14 @@ export class DOMImageElement extends BaseElement<
     });
   }
 
-  protected async createObject(type: string, value: string): Promise<DOMImage> {
+  protected async createObject(
+    type: string,
+    value: string,
+  ): Promise<ImageObject> {
     const blob = await this.package_.getBlob(type, value);
     const blobUrl = URL.createObjectURL(blob);
     try {
-      const image = new DOMImage(this.package_.manifest.density);
+      const image = new ImageObject(this.package_.manifest.density);
       await image.loadImage(blobUrl);
       return image;
     } finally {
@@ -417,25 +343,25 @@ export class DOMImageElement extends BaseElement<
     }
   }
 
-  protected destroyObject(_object: DOMImage) {}
+  protected destroyObject(_object: ImageObject) {}
 
-  protected attachObject(object: DOMImage) {
+  protected attachObject(object: ImageObject) {
     this.layer.appendChild(object.element);
   }
 
-  protected detachObject(object: DOMImage) {
+  protected detachObject(object: ImageObject) {
     object.element.remove();
   }
 
   protected getPropertyValue(
-    object: DOMImage,
+    object: ImageObject,
     propertyName: keyof ImageElementResolvedProperties,
   ): ImageElementResolvedProperties[typeof propertyName] {
     return object.getPropertyValue(propertyName);
   }
 
   protected setPropertyValue(
-    object: DOMImage,
+    object: ImageObject,
     propertyName: keyof ImageElementResolvedProperties,
     propertyValue: ImageElementResolvedProperties[typeof propertyName],
   ) {
@@ -444,7 +370,7 @@ export class DOMImageElement extends BaseElement<
 }
 
 export class TextElement extends BaseElement<
-  AnimatedText,
+  TextObject,
   TextElementProperties,
   TextElementResolvedProperties,
   unknown
@@ -452,14 +378,15 @@ export class TextElement extends BaseElement<
   constructor(
     private readonly package_: Package,
     private readonly container: HTMLElement,
+    ticker: Ticker,
     private readonly enterByGraphemeCluster: boolean,
   ) {
-    super(false);
+    super(ticker, false);
   }
 
   protected resolveProperties(
     properties: TextElementProperties,
-    _object: AnimatedText,
+    _object: TextObject,
     valueChanged: boolean,
     _options: unknown,
   ): TextElementResolvedProperties {
@@ -469,26 +396,26 @@ export class TextElement extends BaseElement<
   protected async createObject(
     _type: string,
     value: string,
-  ): Promise<AnimatedText> {
-    return new AnimatedText(
+  ): Promise<TextObject> {
+    return new TextObject(
       value,
       this.package_.manifest.locale,
       this.enterByGraphemeCluster,
     );
   }
 
-  protected destroyObject(_object: AnimatedText) {}
+  protected destroyObject(_object: TextObject) {}
 
-  protected attachObject(object: AnimatedText) {
+  protected attachObject(object: TextObject) {
     this.container.appendChild(object.element);
   }
 
-  protected detachObject(object: AnimatedText) {
+  protected detachObject(object: TextObject) {
     object.element.remove();
   }
 
   protected getTransitionElementCount(
-    object: AnimatedText,
+    object: TextObject,
     isEnter: boolean,
   ): number {
     return isEnter && this.enterByGraphemeCluster
@@ -497,14 +424,14 @@ export class TextElement extends BaseElement<
   }
 
   protected getPropertyValue(
-    object: AnimatedText,
+    object: TextObject,
     propertyName: keyof TextElementResolvedProperties,
   ): TextElementResolvedProperties[typeof propertyName] {
     return object.getPropertyValue(propertyName);
   }
 
   protected setPropertyValue(
-    object: AnimatedText,
+    object: TextObject,
     propertyName: keyof TextElementResolvedProperties,
     propertyValue: TextElementResolvedProperties[typeof propertyName],
   ) {

@@ -1,13 +1,12 @@
-import { Application } from 'pixi.js';
-
 import { ElementProperties, Engine, UpdateViewOptions } from '../engine';
 import {
-  DOMImageElement,
+  ImageElement,
   Element,
   ImageElementTransitionOptions,
   TextElement,
 } from './Element';
 import { resolveElementValue } from './ElementResolvedProperties';
+import { Ticker } from './Ticker';
 
 export class ViewError extends Error {
   constructor(message?: string, options?: ErrorOptions) {
@@ -16,7 +15,6 @@ export class ViewError extends Error {
 }
 
 export class View {
-  private pixiApplication!: Application;
   private backgroundElement!: HTMLElement;
   private figureElement!: HTMLElement;
   private foregroundElement!: HTMLElement;
@@ -29,6 +27,8 @@ export class View {
   private debugElement!: HTMLElement;
 
   private elements = new Map<string, Element<ElementProperties, unknown>>();
+  private visualTicker = new Ticker();
+  private auralTicker = new Ticker();
 
   private resolveUpdate: ((value: boolean) => void) | undefined;
 
@@ -42,25 +42,6 @@ export class View {
   async init() {
     const rootElement = this.rootElement;
     rootElement.style.position = 'relative';
-
-    const canvas = rootElement.getElementsByClassName(
-      'canvas',
-    )[0] as HTMLCanvasElement;
-    const pixiApplication = new Application();
-    await pixiApplication.init({
-      backgroundAlpha: 0,
-      canvas,
-      sharedTicker: true,
-    });
-    // Not setting resolution in Pixi.js because we need to handle it manually for elements outside
-    // Pixi.js anyway.
-    const manifest = this.engine.package_.manifest;
-    pixiApplication.renderer.resize(
-      Math.round(manifest.width * manifest.density),
-      Math.round(manifest.height * manifest.density),
-    );
-    pixiApplication.stage.eventMode = 'none';
-    this.pixiApplication = pixiApplication;
 
     this.backgroundElement = rootElement.getElementsByClassName(
       'background',
@@ -105,7 +86,6 @@ export class View {
     this.dialogueTextElement = dialogueElement.getElementsByClassName(
       'text',
     )[0] as HTMLElement;
-
     const pointerElement = rootElement.getElementsByClassName(
       'pointer',
     )[0] as HTMLElement;
@@ -115,10 +95,11 @@ export class View {
         this.resolveUpdate = undefined;
       }
     });
-
     this.debugElement = rootElement.getElementsByClassName(
       'debug',
     )[0] as HTMLElement;
+    this.visualTicker.start();
+    this.auralTicker.start();
   }
 
   async update(options: UpdateViewOptions): Promise<boolean> {
@@ -174,6 +155,7 @@ export class View {
             element = new TextElement(
               this.engine.package_,
               this.dialogueNameElement,
+              this.visualTicker,
               false,
             );
             break;
@@ -181,6 +163,7 @@ export class View {
             element = new TextElement(
               this.engine.package_,
               this.dialogueTextElement,
+              this.visualTicker,
               true,
             );
             break;
@@ -188,33 +171,31 @@ export class View {
             // TODO
             continue;
           case 'background':
-            element = new DOMImageElement(
+            element = new ImageElement(
               this.engine.package_,
               this.backgroundElement,
+              this.visualTicker,
             );
             break;
           case 'figure':
-            element = new DOMImageElement(
+            element = new ImageElement(
               this.engine.package_,
               this.figureElement,
+              this.visualTicker,
             );
             break;
           case 'foreground':
-            // Pixi.js doesn't support custom compositing operators like 'plus-lighter'.
-            // https://github.com/pixijs/pixijs/issues/11324
-            // element = new PixiImageElement(
-            //   this.engine.package_,
-            //   this.pixiApplication.stage,
-            // );
-            element = new DOMImageElement(
+            element = new ImageElement(
               this.engine.package_,
               this.foregroundElement,
+              this.visualTicker,
             );
             break;
           case 'avatar':
-            element = new DOMImageElement(
+            element = new ImageElement(
               this.engine.package_,
               this.dialogueAvatarElement,
+              this.visualTicker,
             );
             break;
           case 'music':
@@ -315,7 +296,6 @@ export class View {
   }
 
   async destroy() {
-    this.pixiApplication.destroy(true, true);
-    this.rootElement.textContent = '';
+    this.rootElement.innerHTML = '';
   }
 }

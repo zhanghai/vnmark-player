@@ -40,10 +40,6 @@ function App() {
           width: 1280,
           height: 720,
         }}>
-        <canvas
-          className="canvas"
-          style={{ position: 'absolute', width: '100%', height: '100%' }}
-        />
         <div
           className="background"
           style={{
