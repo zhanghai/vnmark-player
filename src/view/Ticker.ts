@@ -1,3 +1,5 @@
+import { ViewError } from './View';
+
 export type TickerCallback = (time: number) => void;
 
 export class Ticker {
@@ -41,6 +43,9 @@ export class Ticker {
   resume() {
     if (this.isResumed) {
       return;
+    }
+    if (!this.isStarted) {
+      throw new ViewError("Cannot resume ticker before it's started");
     }
     this.requestId = requestAnimationFrame(it => this.update(it));
   }

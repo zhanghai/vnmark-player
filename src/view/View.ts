@@ -294,5 +294,8 @@ export class View {
 
   async destroy() {
     this.rootElement.innerHTML = '';
+
+    this.visualTicker.stop();
+    this.auralTicker.stop();
   }
 }
