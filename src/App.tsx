@@ -15,7 +15,6 @@ function App() {
     const quickJs = await getQuickJS();
     const engine = new Engine(package_, quickJs);
     const view = new View(viewRef.current!, engine);
-    await view.init();
     await engine.execute();
   };
 

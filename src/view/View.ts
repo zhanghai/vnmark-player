@@ -37,12 +37,8 @@ export class View {
     readonly engine: Engine,
   ) {
     engine.viewUpdater = options => this.update(options);
-  }
 
-  async init() {
-    const rootElement = this.rootElement;
     rootElement.style.position = 'relative';
-
     this.backgroundElement = rootElement.getElementsByClassName(
       'background',
     )[0] as HTMLElement;
@@ -98,6 +94,7 @@ export class View {
     this.debugElement = rootElement.getElementsByClassName(
       'debug',
     )[0] as HTMLElement;
+
     this.visualTicker.start();
     this.auralTicker.start();
   }
