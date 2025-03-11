@@ -378,6 +378,7 @@ export class DOMImageElement extends BaseElement<
     layer.style.position = 'absolute';
     layer.style.inset = '0';
     layer.style.isolation = 'isolate';
+    // FIXME: Use the correct order instead of the insertion order.
     container.appendChild(layer);
     this.layer = layer;
   }

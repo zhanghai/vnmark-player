@@ -61,7 +61,12 @@ function App() {
           />
           <div
             className="avatar"
-            style={{ position: 'absolute', paddingLeft: 65, paddingTop: 543 }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              paddingLeft: 65,
+              paddingTop: 543,
+            }}
           />
           <div
             className="name"
