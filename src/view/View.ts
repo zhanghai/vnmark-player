@@ -145,6 +145,7 @@ export class View {
             element = new TextElement(
               this.engine.package_,
               this.dialogueNameElement,
+              elementProperties.index!,
               this.visualTicker,
               false,
             );
@@ -153,6 +154,7 @@ export class View {
             element = new TextElement(
               this.engine.package_,
               this.dialogueTextElement,
+              elementProperties.index!,
               this.visualTicker,
               true,
             );
@@ -164,6 +166,7 @@ export class View {
             element = new ImageElement(
               this.engine.package_,
               this.backgroundElement,
+              elementProperties.index!,
               this.visualTicker,
             );
             break;
@@ -171,6 +174,7 @@ export class View {
             element = new ImageElement(
               this.engine.package_,
               this.figureElement,
+              elementProperties.index!,
               this.visualTicker,
             );
             break;
@@ -178,6 +182,7 @@ export class View {
             element = new ImageElement(
               this.engine.package_,
               this.foregroundElement,
+              elementProperties.index!,
               this.visualTicker,
             );
             break;
@@ -185,6 +190,7 @@ export class View {
             element = new ImageElement(
               this.engine.package_,
               this.dialogueAvatarElement,
+              elementProperties.index!,
               this.visualTicker,
             );
             break;

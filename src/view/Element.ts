@@ -311,6 +311,7 @@ export class ImageElement extends BaseElement<
   constructor(
     private readonly package_: Package,
     container: HTMLElement,
+    index: number,
     ticker: Ticker,
   ) {
     super(ticker, true);
@@ -320,8 +321,7 @@ export class ImageElement extends BaseElement<
     layer.style.inset = '0';
     layer.style.isolation = 'isolate';
     layer.style.overflow = 'hidden';
-    // FIXME: Use the correct order instead of the insertion order.
-    container.appendChild(layer);
+    addElementToContainer(container, index, layer);
     this.layer = layer;
   }
 
@@ -398,6 +398,7 @@ export class TextElement extends BaseElement<
   constructor(
     private readonly package_: Package,
     private readonly container: HTMLElement,
+    private readonly index: number,
     ticker: Ticker,
     private readonly enterByGraphemeCluster: boolean,
   ) {
@@ -427,7 +428,7 @@ export class TextElement extends BaseElement<
   protected destroyObject(_object: TextObject) {}
 
   protected attachObject(object: TextObject) {
-    this.container.appendChild(object.element);
+    addElementToContainer(this.container, this.index, object.element);
   }
 
   protected detachObject(object: TextObject) {
@@ -548,4 +549,27 @@ export class AudioElement extends BaseElement<
 
     super.snap(propertyMatcher);
   }
+}
+
+function addElementToContainer(
+  container: HTMLElement,
+  elementIndex: number,
+  element: HTMLElement,
+) {
+  let insertBeforeElement: HTMLElement | null = null;
+  for (const childElement of container.children) {
+    if (!(childElement instanceof HTMLElement)) {
+      continue;
+    }
+    const childIndexString = childElement.dataset.index;
+    if (!childIndexString) {
+      continue;
+    }
+    const childIndex = Number.parseInt(childIndexString);
+    if (elementIndex < childIndex) {
+      insertBeforeElement = childElement;
+    }
+  }
+  element.dataset.index = elementIndex.toString();
+  container.insertBefore(element, insertBeforeElement);
 }
