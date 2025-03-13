@@ -278,8 +278,10 @@ export namespace AudioElementResolvedProperties {
   ): AudioElementResolvedProperties {
     const value = options.valueChanged ? 0 : 1;
     const volume =
-      resolvePropertyValue(properties.volume, it => NumberValue.resolve(it)) ??
-      1;
+      resolvePropertyValue(
+        properties.volume,
+        it => NumberValue.resolve(it) ?? PercentageValue.resolve(it, 1),
+      ) ?? 1;
     let defaultLoop: boolean;
     switch (properties.type) {
       case 'music':
