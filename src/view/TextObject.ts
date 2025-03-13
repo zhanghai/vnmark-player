@@ -22,6 +22,7 @@ export class TextObject {
     const element = document.createElement('div');
     element.style.position = 'absolute';
     element.style.inset = '0';
+    element.style.overflow = 'hidden';
     element.appendChild(fragment);
     const spans: HTMLSpanElement[] = [];
     if (enterByGraphemeCluster) {

@@ -97,6 +97,7 @@ function App() {
               left: 266,
               top: 570,
               width: 78,
+              height: 150,
             }}
           />
           <div
@@ -106,6 +107,7 @@ function App() {
               left: 340,
               top: 570,
               width: 600,
+              height: 150,
             }}
           />
         </div>
