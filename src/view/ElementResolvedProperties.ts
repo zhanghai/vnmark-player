@@ -101,10 +101,10 @@ export namespace ImageElementResolvedProperties {
     screenHeight: number;
     imageWidth: number;
     imageHeight: number;
-    figureIndex: number;
-    figureCount: number;
-    avatarPositionX: number;
-    avatarPositionY: number;
+    figureIndex?: number;
+    figureCount?: number;
+    avatarPositionX?: number;
+    avatarPositionY?: number;
   }
 
   export function resolve(
@@ -133,13 +133,13 @@ export namespace ImageElementResolvedProperties {
     switch (properties.type) {
       case 'figure':
         defaultPositionX =
-          (options.figureIndex / (options.figureCount + 1)) *
+          (options.figureIndex! / (options.figureCount! + 1)) *
           options.screenWidth;
         defaultPositionY = options.screenHeight;
         break;
       case 'avatar':
-        defaultPositionX = options.avatarPositionX;
-        defaultPositionY = options.avatarPositionY;
+        defaultPositionX = options.avatarPositionX!;
+        defaultPositionY = options.avatarPositionY!;
         break;
       default:
         defaultPositionX = 0;

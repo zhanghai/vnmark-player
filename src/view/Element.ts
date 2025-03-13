@@ -285,12 +285,20 @@ export abstract class BaseElement<
   }
 }
 
-export interface ImageElementTransitionOptions {
+export interface FigureElementTransitionOptions {
   figureIndex: number;
   figureCount: number;
+}
+
+export interface AvatarElementTransitionOptions {
   avatarPositionX: number;
   avatarPositionY: number;
 }
+
+export type ImageElementTransitionOptions =
+  | FigureElementTransitionOptions
+  | AvatarElementTransitionOptions
+  | undefined;
 
 export class ImageElement extends BaseElement<
   ImageObject,
@@ -331,10 +339,12 @@ export class ImageElement extends BaseElement<
       screenHeight: manifest.height,
       imageWidth: object.element.naturalWidth,
       imageHeight: object.element.naturalHeight,
-      figureIndex: options.figureIndex,
-      figureCount: options.figureCount,
-      avatarPositionX: options.avatarPositionX,
-      avatarPositionY: options.avatarPositionY,
+      figureIndex: (options as FigureElementTransitionOptions)?.figureIndex,
+      figureCount: (options as FigureElementTransitionOptions)?.figureCount,
+      avatarPositionX: (options as AvatarElementTransitionOptions)
+        ?.avatarPositionX,
+      avatarPositionY: (options as AvatarElementTransitionOptions)
+        ?.avatarPositionY,
     });
   }
 

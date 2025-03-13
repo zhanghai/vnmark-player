@@ -1,10 +1,11 @@
 import { ElementProperties, Engine, UpdateViewOptions } from '../engine';
 import {
-  ImageElement,
-  Element,
-  ImageElementTransitionOptions,
-  TextElement,
   AudioElement,
+  AvatarElementTransitionOptions,
+  Element,
+  FigureElementTransitionOptions,
+  ImageElement,
+  TextElement,
 } from './Element';
 import { resolveElementValue } from './ElementResolvedProperties';
 import { Ticker } from './Ticker';
@@ -19,7 +20,6 @@ export class View {
   private backgroundElement!: HTMLElement;
   private figureElement!: HTMLElement;
   private foregroundElement!: HTMLElement;
-  private dialogueElement!: HTMLElement;
   private dialogueAvatarElement!: HTMLElement;
   private dialogueAvatarPositionX!: number;
   private dialogueAvatarPositionY!: number;
@@ -52,7 +52,6 @@ export class View {
     const dialogueElement = rootElement.getElementsByClassName(
       'dialogue',
     )[0] as HTMLElement;
-    this.dialogueElement = dialogueElement;
     const dialogueAvatarElement = dialogueElement.getElementsByClassName(
       'avatar',
     )[0] as HTMLElement;
@@ -120,35 +119,28 @@ export class View {
         return leftElementProperties.index - rightElementProperties.index;
       },
     );
+    const elementIndices: Record<string, number> = {};
+    const elementTypeCounts: Record<string, number> = {};
+    for (const elementName of elementNames) {
+      const elementProperties = elementPropertiesMap[elementName]!;
+      if (!resolveElementValue(elementProperties)) {
+        continue;
+      }
+      const elementType = elementProperties.type;
+      let elementTypeCount = elementTypeCounts[elementType] ?? 0;
+      elementIndices[elementName] = elementTypeCount;
+      ++elementTypeCount;
+      elementTypeCounts[elementType] = elementTypeCount;
+    }
 
-    const figureCount = Object.values(elementPropertiesMap).reduce(
-      (previousValue, currentValue) =>
-        currentValue.type === 'figure' && resolveElementValue(currentValue)
-          ? previousValue + 1
-          : previousValue,
-      0,
-    );
-    let figureIndex = 0;
     const elementTransitionGenerators = [];
     for (const elementName of elementNames) {
       const elementProperties = elementPropertiesMap[elementName]!;
 
-      if (
-        elementProperties.type === 'figure' &&
-        resolveElementValue(elementProperties)
-      ) {
-        ++figureIndex;
-      }
-      const imageElementTransitionOptions: ImageElementTransitionOptions = {
-        figureIndex,
-        figureCount,
-        avatarPositionX: this.dialogueAvatarPositionX,
-        avatarPositionY: this.dialogueAvatarPositionY,
-      };
-
       let element = this.elements.get(elementName);
+      const elementType = elementProperties.type;
       if (!element && resolveElementValue(elementProperties)) {
-        switch (elementProperties.type) {
+        switch (elementType) {
           case 'name':
             element = new TextElement(
               this.engine.package_,
@@ -216,8 +208,23 @@ export class View {
       if (!element) {
         continue;
       }
+
+      let transitionOptions: unknown;
+      switch (elementType) {
+        case 'figure':
+          transitionOptions = {
+            figureIndex: elementIndices[elementName],
+            figureCount: elementTypeCounts[elementType],
+          } satisfies FigureElementTransitionOptions;
+          break;
+        case 'avatar':
+          transitionOptions = {
+            avatarPositionX: this.dialogueAvatarPositionX,
+            avatarPositionY: this.dialogueAvatarPositionY,
+          } satisfies AvatarElementTransitionOptions;
+      }
       elementTransitionGenerators.push(
-        element.transition(elementProperties, imageElementTransitionOptions),
+        element.transition(elementProperties, transitionOptions),
       );
     }
 
