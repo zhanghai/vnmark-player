@@ -11,7 +11,11 @@ export class ElementPropertyMatcher {
 
   getPropertyMatcher(elementName: string): Matcher {
     const propertyMatchers = this.matchers
-      .filter(it => it[0].match(elementName))
+      .filter(
+        it =>
+          it[0].match(elementName) ||
+          it[0].match(elementName.replace(/(?<![0-9])1$/, '')),
+      )
       .map(it => it[1]);
     return {
       match: propertyName =>
@@ -30,7 +34,7 @@ export namespace ElementPropertyMatcher {
           `Invalid element property "${elementPropertyName}"`,
         );
       }
-      const [elementName, propertyName] = elementPropertyName;
+      const [elementName, propertyName] = elementAndPropertyNames;
       matchers.push([
         createGlobMatcher(elementName),
         createGlobMatcher(propertyName),

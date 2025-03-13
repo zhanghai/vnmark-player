@@ -273,14 +273,10 @@ export class View {
       case 'wait':
         return Promise.race([
           Promise.all(
-            Array.from(this.elements.entries()).flatMap(
-              ([elementName, element]) => {
-                element.wait(
-                  options.elementPropertyMatcher.getPropertyMatcher(
-                    elementName,
-                  ),
-                );
-              },
+            Array.from(this.elements.entries()).map(([elementName, element]) =>
+              element.wait(
+                options.elementPropertyMatcher.getPropertyMatcher(elementName),
+              ),
             ),
           ).then(() => true),
           new Promise<boolean>(resolve => {

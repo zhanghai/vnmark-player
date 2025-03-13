@@ -92,9 +92,13 @@ export class Transition<ValueType> {
   asPromise(): Promise<Transition<ValueType>> {
     let promise = this.promise;
     if (!promise) {
-      promise = new Promise(resolve => {
-        this.resolvePromise = () => resolve(this);
-      });
+      if (this._isEnded) {
+        promise = Promise.resolve(this);
+      } else {
+        promise = new Promise(resolve => {
+          this.resolvePromise = () => resolve(this);
+        });
+      }
       this.promise = promise;
     }
     return promise;
@@ -194,6 +198,11 @@ export class Transition<ValueType> {
   }
 
   set fraction(fraction: number) {
+    if (this._isEnded) {
+      throw new Error(
+        'Cannot change fraction for a transition that has already ended',
+      );
+    }
     this.runningTime =
       this.delay + Math.min(Math.max(0, fraction), 1) * this.duration;
     this.updateCurrentValue();

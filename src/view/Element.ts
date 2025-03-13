@@ -43,9 +43,9 @@ export abstract class BaseElement<
   protected properties: Properties | undefined;
   protected options: Options | undefined;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected readonly objectTransitions = new MultiMap<
     Object,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Transition<any>
   >();
   protected readonly propertyTransitions = new MultiMap<
@@ -275,10 +275,9 @@ export abstract class BaseElement<
   }
 
   snap(propertyMatcher: Matcher) {
-    for (const [
-      propertyName,
-      transition,
-    ] of this.propertyTransitions.entries()) {
+    // Multimap isn't 100% safe for mutations during iteration.
+    const entries = Array.from(this.propertyTransitions.entries());
+    for (const [propertyName, transition] of entries) {
       if (propertyMatcher.match(propertyName as string)) {
         transition.cancel();
       }

@@ -70,6 +70,7 @@ export class TextObject {
     }
     this._value = value;
     if (this.isEnter && this.enterByGraphemeCluster) {
+      this.element.style.removeProperty('opacity');
       const windowStart =
         value * (this.spans.length + ENTER_TRANSITION_WINDOW_SIZE - 1) -
         ENTER_TRANSITION_WINDOW_SIZE +
@@ -89,6 +90,9 @@ export class TextObject {
         }
       });
     } else {
+      if (this.enterByGraphemeCluster) {
+        this.spans.forEach(it => it.removeAttribute('style'));
+      }
       if (value === 1) {
         this.element.style.removeProperty('opacity');
       } else {
