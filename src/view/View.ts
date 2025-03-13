@@ -56,24 +56,18 @@ export class View {
       'avatar',
     )[0] as HTMLElement;
     this.dialogueAvatarElement = dialogueAvatarElement;
-    const dialogueAvatarPaddingLeft = dialogueAvatarElement.style.paddingLeft;
     const dialogueAvatarPositionX = Number.parseFloat(
-      dialogueAvatarElement.style.paddingLeft.replace(/px$/, ''),
+      dialogueAvatarElement.dataset.positionX!,
     );
     if (Number.isNaN(dialogueAvatarPositionX)) {
-      throw new ViewError(
-        `Cannot parse dialogue avatar padding-left "${dialogueAvatarPaddingLeft}"`,
-      );
+      throw new ViewError('Cannot parse dialogue avatar position X');
     }
     this.dialogueAvatarPositionX = dialogueAvatarPositionX;
-    const dialogueAvatarPaddingTop = dialogueAvatarElement.style.paddingTop;
     const dialogueAvatarPositionY = Number.parseFloat(
-      dialogueAvatarElement.style.paddingTop.replace(/px$/, ''),
+      dialogueAvatarElement.dataset.positionY!,
     );
     if (Number.isNaN(dialogueAvatarPositionY)) {
-      throw new ViewError(
-        `Cannot parse dialogue avatar padding-top "${dialogueAvatarPaddingTop}"`,
-      );
+      throw new ViewError('Cannot parse dialogue avatar position Y');
     }
     this.dialogueAvatarPositionY = dialogueAvatarPositionY;
     this.dialogueNameElement = dialogueElement.getElementsByClassName(

@@ -86,9 +86,9 @@ function App() {
             style={{
               position: 'absolute',
               inset: 0,
-              paddingLeft: 65,
-              paddingTop: 543,
             }}
+            data-position-x="65"
+            data-position-y="543"
           />
           <div
             className="name"
