@@ -39,33 +39,34 @@ function App() {
         ref={viewRef}
         style={{
           position: 'relative',
-          fontFamily: 'serif',
           width: 1280,
           height: 720,
+          fontFamily: 'serif',
+          userSelect: 'none',
         }}>
         <div
-          className="background"
+          data-type="background"
           style={{
             position: 'absolute',
             inset: 0,
           }}
         />
         <div
-          className="figure"
+          data-type="figure"
           style={{
             position: 'absolute',
             inset: 0,
           }}
         />
         <div
-          className="foreground"
+          data-type="foreground"
           style={{
             position: 'absolute',
             inset: 0,
           }}
         />
         <div
-          className="dialogue"
+          data-layout="dialogue"
           style={{
             position: 'absolute',
             inset: 0,
@@ -82,7 +83,7 @@ function App() {
             }}
           />
           <div
-            className="avatar"
+            data-type="avatar"
             style={{
               position: 'absolute',
               inset: 0,
@@ -91,7 +92,7 @@ function App() {
             data-position-y="543"
           />
           <div
-            className="name"
+            data-type="name"
             style={{
               position: 'absolute',
               left: 266,
@@ -101,7 +102,7 @@ function App() {
             }}
           />
           <div
-            className="text"
+            data-type="text"
             style={{
               position: 'absolute',
               left: 340,
@@ -111,15 +112,7 @@ function App() {
             }}
           />
         </div>
-        <div
-          className="debug"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            fontFamily: 'monospace',
-            whiteSpace: 'pre-wrap',
-          }}></div>
-        <div className="pointer" style={{ position: 'absolute', inset: 0 }} />
+        <div data-id="pointer" style={{ position: 'absolute', inset: 0 }} />
       </div>
     </>
   );

@@ -6,7 +6,7 @@ import { ViewError } from './View';
 const ENTER_TRANSITION_WINDOW_SIZE = 5;
 
 export class TextObject {
-  public readonly element: HTMLDivElement;
+  readonly element: HTMLDivElement;
   private readonly spans: HTMLSpanElement[];
 
   private _value = 1;

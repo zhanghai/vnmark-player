@@ -2,7 +2,7 @@ import { ImageElementResolvedProperties } from './ElementResolvedProperties';
 import { ViewError } from './View';
 
 export class ImageObject {
-  public readonly element: HTMLImageElement;
+  readonly element: HTMLImageElement;
 
   private _anchorX = 0;
   private _anchorY = 0;

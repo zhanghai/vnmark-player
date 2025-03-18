@@ -1,5 +1,6 @@
 import { BlobReader, Entry, ZipReader } from '@zip.js/zip.js';
 
+import { Maps } from '../util';
 import { Manifest, MANIFEST_FILE } from './Manifest';
 import { Package, PackageError } from './Package';
 
@@ -59,12 +60,7 @@ export class ZipPackage extends Package {
       if (fileToEntries.has(parentDirectory)) {
         throw new PackageError(`Conflicting entry "${entry.filename}"`);
       }
-      let parentDirectoryChildren = directories.get(parentDirectory);
-      if (!parentDirectoryChildren) {
-        parentDirectoryChildren = [];
-        directories.set(parentDirectory, parentDirectoryChildren);
-      }
-      parentDirectoryChildren.push(file);
+      Maps.getOrSet(directories, parentDirectory, () => []).push(file);
     }
 
     const manifestBlob = ZipPackage.getBlobForFile(

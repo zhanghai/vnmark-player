@@ -88,6 +88,14 @@ const COMMAND_ARRAY: Command[] = [
     },
   },
   {
+    name: 'set_layout',
+    argumentCount: 1,
+    async execute(engine, arguments_): Promise<boolean> {
+      const [layoutName] = arguments_;
+      return await engine.updateView({ type: 'set_layout', layoutName });
+    },
+  },
+  {
     name: 'set_property',
     argumentCount: 3,
     async execute(engine, arguments_) {
@@ -99,7 +107,7 @@ const COMMAND_ARRAY: Command[] = [
         propertyName,
         propertyValue,
       );
-      const canonicalElementName = index ? `${type}${index}` : type;
+      const canonicalElementName = `${type}${index}`;
       engine.updateState(it => {
         const element = it.elements[canonicalElementName];
         if (value.type === 'initial') {
@@ -118,7 +126,7 @@ const COMMAND_ARRAY: Command[] = [
           } else {
             it.elements[canonicalElementName] = {
               type,
-              ...(index && { index }),
+              index,
               [name]: value,
             };
           }

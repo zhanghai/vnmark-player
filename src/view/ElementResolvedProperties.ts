@@ -61,9 +61,6 @@ export function resolveElementTransitionDuration(
     case 'effect':
       defaultTransitionDuration = 0;
       break;
-    case 'layout':
-      defaultTransitionDuration = 1000;
-      break;
     default:
       throw new ViewError(`Unexpected element type "${properties.type}"`);
   }

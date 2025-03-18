@@ -13,9 +13,28 @@ import {
   ZeroValue,
 } from './PropertyValue';
 
+const CONST_ELEMENT_TYPES = [
+  'background',
+  'figure',
+  'foreground',
+  'avatar',
+  'name',
+  'text',
+  'choice',
+  'music',
+  'sound',
+  'voice',
+  'video',
+  'effect',
+] as const;
+
+export const ELEMENT_TYPES = CONST_ELEMENT_TYPES as unknown as string[];
+
+export type ElementType = (typeof CONST_ELEMENT_TYPES)[number];
+
 export interface BaseElementProperties {
-  readonly type: string;
-  readonly index?: number;
+  readonly type: ElementType;
+  readonly index: number;
   readonly value?: NoneValue | StringValue;
   readonly transitionDuration?: ZeroValue | TimeValue;
 }
@@ -62,22 +81,17 @@ export interface EffectElementProperties extends BaseElementProperties {
   readonly type: 'effect';
 }
 
-export interface LayoutElementProperties extends BaseElementProperties {
-  readonly type: 'layout';
-}
-
 export type ElementProperties =
   | ImageElementProperties
   | TextElementProperties
   | ChoiceElementProperties
   | AudioElementProperties
   | VideoElementProperties
-  | EffectElementProperties
-  | LayoutElementProperties;
+  | EffectElementProperties;
 
 export type Property = {
-  readonly type: ElementProperties['type'];
-  readonly index?: ElementProperties['index'];
+  readonly type: ElementType;
+  readonly index: number;
   readonly name: string;
   readonly value: PropertyValue;
 };
@@ -94,35 +108,14 @@ export namespace Property {
     if (!elementNameMatch) {
       throw new EngineError(`Unsupported element name "${elementName}"`);
     }
-    const [, type, indexString] = elementNameMatch;
-    let index: number | undefined;
-    switch (type) {
-      case 'background':
-      case 'figure':
-      case 'foreground':
-      case 'avatar':
-      case 'name':
-      case 'text':
-      case 'choice':
-      case 'music':
-      case 'sound':
-      case 'voice':
-      case 'video':
-      case 'effect':
-        index = indexString ? Number(indexString) : 1;
-        break;
-      case 'layout':
-        if (indexString) {
-          throw new EngineError(
-            `Unsupported index ${indexString} on element type "${type}" from "${elementName}"`,
-          );
-        }
-        break;
-      default:
-        throw new EngineError(
-          `Unsupported element type "${type}" from "${elementName}"`,
-        );
+    const [, typeString, indexString] = elementNameMatch;
+    if (!ELEMENT_TYPES.includes(typeString)) {
+      throw new EngineError(
+        `Unsupported element type "${typeString}" from "${elementName}"`,
+      );
     }
+    const type = typeString as ElementType;
+    const index = indexString ? Number(indexString) : 1;
     let name: string | undefined;
     let value: PropertyValue | undefined;
     switch (propertyName) {
@@ -331,8 +324,6 @@ export namespace Property {
           break;
         case 'effect':
           break;
-        case 'layout':
-          break;
         default:
           throw new EngineError(`Unexpected element type "${type}"`);
       }
@@ -342,7 +333,7 @@ export namespace Property {
         `Unexpected property name "${propertyName}" on element type "${type}"`,
       );
     }
-    return { type, ...(index && { index }), name, value };
+    return { type, index, name, value };
   }
 
   function parsePropertyValue<T extends PropertyValue | undefined>(

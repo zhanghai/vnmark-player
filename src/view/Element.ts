@@ -25,11 +25,13 @@ export interface Element<Properties extends ElementProperties, Options> {
   transition(
     properties: Properties,
     options: Options,
-  ): Generator<Promise<unknown>, void, void>;
+  ): Generator<Promise<void>, void, void>;
 
   wait(propertyMatcher: Matcher): Promise<void>;
 
   snap(propertyMatcher: Matcher): void;
+
+  destroy(): void;
 }
 
 export abstract class BaseElement<
@@ -62,7 +64,7 @@ export abstract class BaseElement<
   *transition(
     properties: Properties,
     options: Options,
-  ): Generator<Promise<unknown>, void, void> {
+  ): Generator<Promise<void>, void, void> {
     const oldObject = this.object;
     const oldProperties = this.properties;
     const oldOptions = this.options;
@@ -266,21 +268,34 @@ export abstract class BaseElement<
     transition.start();
   }
 
-  wait(propertyMatcher: Matcher): Promise<void> {
-    return Promise.all(
-      Array.from(this.propertyTransitions.entries())
+  async wait(propertyMatcher: Matcher): Promise<void> {
+    await Promise.all(
+      Array.from(this.propertyTransitions)
         .filter(it => propertyMatcher.match(it[0] as string))
         .map(it => it[1].asPromise()),
-    ).then(() => {});
+    );
   }
 
   snap(propertyMatcher: Matcher) {
     // Multimap isn't 100% safe for mutations during iteration.
-    const entries = Array.from(this.propertyTransitions.entries());
-    for (const [propertyName, transition] of entries) {
+    for (const [propertyName, transition] of Array.from(
+      this.propertyTransitions,
+    )) {
       if (propertyMatcher.match(propertyName as string)) {
         transition.cancel();
       }
+    }
+  }
+
+  destroy() {
+    // Multimap isn't 100% safe for mutations during iteration.
+    for (const transition of Array.from(this.objectTransitions.values())) {
+      transition.cancel();
+    }
+    const object = this.object;
+    if (object) {
+      this.detachObject(object);
+      this.destroyObject(object);
     }
   }
 }

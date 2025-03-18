@@ -116,6 +116,7 @@ export class Document {
 export interface State {
   readonly fileName: string;
   readonly nextLineIndex: number;
+  readonly layoutName: string;
   readonly elements: Readonly<Record<string, ElementProperties>>;
   readonly scriptStates: Record<string, unknown>;
 }
@@ -124,6 +125,7 @@ export type ViewUpdater = (options: UpdateViewOptions) => Promise<boolean>;
 
 export type UpdateViewOptions =
   | { type: 'pause' }
+  | { type: 'set_layout'; layoutName: string }
   | { type: 'sleep'; durationMillis: number }
   | { type: 'snap'; elementPropertyMatcher: ElementPropertyMatcher }
   | { type: 'wait'; elementPropertyMatcher: ElementPropertyMatcher };
@@ -153,6 +155,7 @@ export class Engine {
     this._state = {
       fileName,
       nextLineIndex: 0,
+      layoutName: 'none',
       elements: {},
       scriptStates: {},
     };
@@ -347,6 +350,18 @@ export class Engine {
     this.updateState(it => {
       it.fileName = name;
       it.nextLineIndex = 0;
+    });
+  }
+
+  setLayout(layoutName: string) {
+    this.updateState(it => {
+      it.layoutName = layoutName;
+    });
+  }
+
+  removeElement(elementName: string) {
+    this.updateState(it => {
+      delete it.elements[elementName];
     });
   }
 
