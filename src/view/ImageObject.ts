@@ -1,3 +1,4 @@
+import { HTMLElements } from '../util';
 import { ImageElementResolvedProperties } from './ElementResolvedProperties';
 import { ViewError } from './View';
 
@@ -32,24 +33,12 @@ export class ImageObject {
     this.updateOpacity();
   }
 
-  load(url: string): Promise<void> {
+  async load(url: string) {
     if (this.element.src) {
       throw new ViewError('Cannot reload an image object');
     }
-    const promise = new Promise<void>((resolve, reject) => {
-      this.element.onload = () => {
-        this.element.onload = null;
-        this.element.onerror = null;
-        resolve();
-      };
-      this.element.onerror = event => {
-        this.element.onload = null;
-        this.element.onerror = null;
-        reject(event);
-      };
-    });
     this.element.src = url;
-    return promise;
+    await this.element.decode();
   }
 
   get anchorX(): number {
@@ -209,11 +198,7 @@ export class ImageObject {
 
   private updateOpacity() {
     const opacity = this.valueAlpha * this.propertyAlpha;
-    if (opacity === 1) {
-      this.element.style.removeProperty('opacity');
-    } else {
-      this.element.style.opacity = opacity.toString();
-    }
+    HTMLElements.setOpacity(this.element, opacity);
   }
 
   getPropertyValue(

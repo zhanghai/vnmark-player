@@ -8,6 +8,7 @@ export class Manifest {
   constructor(
     readonly locale: string,
     readonly names: Map<string, string>,
+    readonly template: string,
     readonly width: number,
     readonly height: number,
     readonly density: number,
@@ -37,6 +38,10 @@ export class Manifest {
         names.set(nameLocale, nameValue);
       }
     }
+    const template = yaml.template;
+    if (typeof template !== 'string' || !template) {
+      throw new PackageError(`Invalid template "${template}"`);
+    }
     const width = yaml.width;
     if (!Number.isInteger(width) || width <= 0) {
       throw new PackageError(`Invalid width "${width}"`);
@@ -53,6 +58,14 @@ export class Manifest {
     if (typeof entrypoint !== 'string' || !entrypoint) {
       throw new PackageError(`Invalid entrypoint "${entrypoint}"`);
     }
-    return new Manifest(locale, names, width, height, density, entrypoint);
+    return new Manifest(
+      locale,
+      names,
+      template,
+      width,
+      height,
+      density,
+      entrypoint,
+    );
   }
 }

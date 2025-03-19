@@ -15,6 +15,7 @@ function App() {
     const quickJs = await getQuickJS();
     const engine = new Engine(package_, quickJs);
     const view = new View(viewRef.current!, engine);
+    await view.init();
     try {
       await engine.execute();
     } finally {
@@ -35,85 +36,7 @@ function App() {
           }}
         />
       </div>
-      <div
-        ref={viewRef}
-        style={{
-          position: 'relative',
-          width: 1280,
-          height: 720,
-          fontFamily: 'serif',
-          userSelect: 'none',
-        }}>
-        <div
-          data-type="background"
-          style={{
-            position: 'absolute',
-            inset: 0,
-          }}
-        />
-        <div
-          data-type="figure"
-          style={{
-            position: 'absolute',
-            inset: 0,
-          }}
-        />
-        <div
-          data-type="foreground"
-          style={{
-            position: 'absolute',
-            inset: 0,
-          }}
-        />
-        <div
-          data-layout="dialogue"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            fontSize: 26,
-            lineHeight: '1.5',
-          }}>
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 420,
-              width: 1280,
-              height: 300,
-            }}
-          />
-          <div
-            data-type="avatar"
-            style={{
-              position: 'absolute',
-              inset: 0,
-            }}
-            data-position-x="65"
-            data-position-y="543"
-          />
-          <div
-            data-type="name"
-            style={{
-              position: 'absolute',
-              left: 266,
-              top: 570,
-              width: 78,
-              height: 150,
-            }}
-          />
-          <div
-            data-type="text"
-            style={{
-              position: 'absolute',
-              left: 340,
-              top: 570,
-              width: 600,
-              height: 150,
-            }}
-          />
-        </div>
-        <div data-id="pointer" style={{ position: 'absolute', inset: 0 }} />
-      </div>
+      <div ref={viewRef} />
     </>
   );
 }

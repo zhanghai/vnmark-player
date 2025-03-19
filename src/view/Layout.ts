@@ -1,10 +1,10 @@
 import { ELEMENT_TYPES, ElementType } from '../engine';
 import { Transition } from '../transition';
-import { Arrays2, Maps } from '../util';
+import { Arrays2, HTMLElements, Maps } from '../util';
 import { Ticker } from './Ticker';
 import { ViewError } from './View';
 
-const LAYOUT_TRANSITION_DURATION = 1000;
+const LAYOUT_TRANSITION_DURATION = 500;
 
 export class Layout {
   private readonly layoutNames: string[];
@@ -21,16 +21,16 @@ export class Layout {
   private readonly transitions: Transition<any>[] = [];
 
   constructor(
-    readonly rootElement: HTMLElement,
+    rootElement: HTMLElement,
     private readonly ticker: Ticker,
   ) {
     const layoutNameSet = new Set<string>();
     this.elementLayouts = new Map();
-    forEachDescendantElement(rootElement, element => {
+    HTMLElements.forEachDescendant(rootElement, element => {
       const layoutNames = getElementLayoutNames(element);
       if (layoutNames.length) {
         if (!layoutNames.includes('none')) {
-          setElementOpacity(element, 0);
+          HTMLElements.setOpacity(element, 0);
         }
         this.elementLayouts.set(element, layoutNames);
         layoutNames.forEach(it => layoutNameSet.add(it));
@@ -43,7 +43,7 @@ export class Layout {
     this.layoutNames = Array.from(layoutNameSet).sort();
 
     this.layoutTypeElements = new Map();
-    forEachDescendantElement(rootElement, element => {
+    HTMLElements.forEachDescendant(rootElement, element => {
       const elementType = element.dataset.type;
       if (!elementType) {
         return true;
@@ -52,7 +52,7 @@ export class Layout {
         throw new ViewError(`Unknown element type "${elementType}"`);
       }
       const layoutNames =
-        firstNonUndefinedOfAncestorElementsOrUndefined(
+        HTMLElements.firstNonUndefinedOfAncestorsOrUndefined(
           element,
           rootElement,
           it => {
@@ -76,7 +76,7 @@ export class Layout {
       return false;
     });
 
-    const pointerElement = firstDescendantElementOrUndefined(
+    const pointerElement = HTMLElements.firstDescendantOrUndefined(
       rootElement,
       it => it.dataset.id === 'pointer',
     );
@@ -154,11 +154,11 @@ export class Layout {
     transitionDuration: number,
   ) {
     const transition = new Transition(
-      getElementOpacity(element),
+      HTMLElements.getOpacity(element),
       opacity,
       transitionDuration,
     )
-      .addOnUpdateCallback(it => setElementOpacity(element, it))
+      .addOnUpdateCallback(it => HTMLElements.setOpacity(element, it))
       .addOnEndCallback(() => {
         Arrays2.remove(this.transitions, transition);
         this.ticker.removeCallback(transition);
@@ -179,80 +179,10 @@ export class Layout {
   }
 }
 
-function forEachDescendantElement(
-  elementExclusive: HTMLElement,
-  action: (element: HTMLElement) => boolean,
-) {
-  for (const childElement of elementExclusive.children) {
-    if (!(childElement instanceof HTMLElement)) {
-      continue;
-    }
-    if (action(childElement)) {
-      forEachDescendantElement(childElement, action);
-    }
-  }
-}
-
-function firstDescendantElementOrUndefined(
-  elementExclusive: HTMLElement,
-  predicate: (element: HTMLElement) => boolean,
-): HTMLElement | undefined {
-  for (const childElement of elementExclusive.children) {
-    if (!(childElement instanceof HTMLElement)) {
-      continue;
-    }
-    if (predicate(childElement)) {
-      return childElement;
-    }
-    const result = firstDescendantElementOrUndefined(childElement, predicate);
-    if (result) {
-      return result;
-    }
-  }
-  return undefined;
-}
-
-function firstNonUndefinedOfAncestorElementsOrUndefined<Result>(
-  elementInclusive: HTMLElement,
-  rootElementExclusive: HTMLElement,
-  transform: (element: HTMLElement) => Result | undefined,
-): Result | undefined {
-  let element: HTMLElement | null = elementInclusive;
-  do {
-    const result = transform(element);
-    if (result !== undefined) {
-      return result;
-    }
-    element = element.parentElement;
-  } while (element && element !== rootElementExclusive);
-  return undefined;
-}
-
 function getElementLayoutNames(element: HTMLElement): string[] {
   const layoutNamesString = element.dataset.layout?.trim();
   if (!layoutNamesString) {
     return [];
   }
   return layoutNamesString.split('[\t\n\f\r ]+').sort();
-}
-
-function getElementOpacity(element: HTMLElement): number {
-  if (element.style.visibility === 'hidden') {
-    return 0;
-  }
-  const opacity = element.style.opacity;
-  return opacity ? Number.parseFloat(opacity) : 1;
-}
-
-function setElementOpacity(element: HTMLElement, opacity: number) {
-  if (opacity === 0) {
-    element.style.visibility = 'hidden';
-  } else {
-    element.style.removeProperty('visibility');
-  }
-  if (opacity === 0 || opacity === 1) {
-    element.style.removeProperty('opacity');
-  } else {
-    element.style.opacity = opacity.toString();
-  }
 }

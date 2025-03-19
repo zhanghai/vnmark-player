@@ -1,3 +1,4 @@
+import DOMPurity from 'dompurify';
 import { MultiMap } from 'mnemonist';
 import {
   ElementProperties,
@@ -5,7 +6,7 @@ import {
   Engine,
   UpdateViewOptions,
 } from '../engine';
-import { Numbers } from '../util';
+import { HTMLElements, Numbers } from '../util';
 import {
   AudioElement,
   AvatarElementTransitionOptions,
@@ -25,7 +26,7 @@ export class ViewError extends Error {
 }
 
 export class View {
-  private readonly layout: Layout;
+  private layout!: Layout;
   private readonly elements = new Map<
     string,
     Element<ElementProperties, unknown>
@@ -37,11 +38,14 @@ export class View {
   private onPointerUpOnce: (() => void) | undefined;
 
   constructor(
-    readonly rootElement: HTMLElement,
-    readonly engine: Engine,
-  ) {
-    this.layout = new Layout(rootElement, this.visualTicker);
+    private readonly rootElement: HTMLElement,
+    private readonly engine: Engine,
+  ) {}
 
+  async init() {
+    await this.loadTemplate();
+
+    this.layout = new Layout(this.rootElement, this.visualTicker);
     this.layout.pointerElement.addEventListener('pointerup', () => {
       if (this.onPointerUpOnce) {
         this.onPointerUpOnce();
@@ -52,7 +56,42 @@ export class View {
     this.visualTicker.start();
     this.auralTicker.start();
 
-    engine.viewUpdater = options => this.update(options);
+    this.engine.viewUpdater = options => this.update(options);
+  }
+
+  private async loadTemplate() {
+    const package_ = this.engine.package_;
+    const template = await (
+      await package_.getBlob('template', package_.manifest.template)
+    ).text();
+    const foreignFragment = DOMPurity.sanitize(template, {
+      RETURN_DOM_FRAGMENT: true,
+    });
+    // Document fragment with a different owner document won't be able to decode images.
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(foreignFragment);
+    const promises: Promise<void>[] = [];
+    HTMLElements.forEachDescendant(fragment, element => {
+      if (element instanceof HTMLImageElement) {
+        const src = element.dataset.src;
+        if (src) {
+          promises.push(
+            package_.getBlob('template', src).then(async blob => {
+              const blobUrl = URL.createObjectURL(blob);
+              try {
+                element.src = blobUrl;
+                await element.decode();
+              } finally {
+                URL.revokeObjectURL(blobUrl);
+              }
+            }),
+          );
+        }
+      }
+      return true;
+    });
+    await Promise.all(promises);
+    this.rootElement.appendChild(fragment);
   }
 
   async update(options: UpdateViewOptions): Promise<boolean> {
@@ -272,10 +311,10 @@ export class View {
     }
   }
 
-  async destroy() {
-    this.rootElement.innerHTML = '';
-
+  destroy() {
     this.visualTicker.stop();
     this.auralTicker.stop();
+
+    this.rootElement.innerHTML = '';
   }
 }

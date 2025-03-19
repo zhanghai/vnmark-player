@@ -1,4 +1,5 @@
 import DOMPurity from 'dompurify';
+import { HTMLElements } from '../util';
 
 import { TextElementResolvedProperties } from './ElementResolvedProperties';
 import { ViewError } from './View';
@@ -71,7 +72,7 @@ export class TextObject {
     }
     this._value = value;
     if (this.isEnter && this.enterByGraphemeCluster) {
-      this.element.style.removeProperty('opacity');
+      HTMLElements.setOpacity(this.element, 1);
       const windowStart =
         value * (this.spans.length + ENTER_TRANSITION_WINDOW_SIZE - 1) -
         ENTER_TRANSITION_WINDOW_SIZE +
@@ -84,21 +85,13 @@ export class TextObject {
             Math.min(indexCenter - windowStart, ENTER_TRANSITION_WINDOW_SIZE),
           ) / ENTER_TRANSITION_WINDOW_SIZE;
         const opacity = 1 - windowFraction;
-        if (opacity === 1) {
-          span.removeAttribute('style');
-        } else {
-          span.style.opacity = opacity.toString();
-        }
+        HTMLElements.setOpacity(span, opacity);
       });
     } else {
       if (this.enterByGraphemeCluster) {
-        this.spans.forEach(it => it.removeAttribute('style'));
+        this.spans.forEach(it => HTMLElements.setOpacity(it, 1));
       }
-      if (value === 1) {
-        this.element.style.removeProperty('opacity');
-      } else {
-        this.element.style.opacity = value.toString();
-      }
+      HTMLElements.setOpacity(this.element, value);
     }
   }
 
