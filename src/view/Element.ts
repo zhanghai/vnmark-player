@@ -5,7 +5,7 @@ import {
   ElementProperties,
   ImageElementProperties,
   Matcher,
-  TextElementProperties,
+  TextElementProperties, VideoElementProperties,
 } from '../engine';
 import { Package } from '../package';
 import { Transition } from '../transition';
@@ -15,11 +15,12 @@ import {
   ImageElementResolvedProperties,
   resolveElementTransitionDuration,
   resolveElementValue,
-  TextElementResolvedProperties,
+  TextElementResolvedProperties, VideoElementResolvedProperties,
 } from './ElementResolvedProperties';
 import { ImageObject } from './ImageObject';
 import { TextObject } from './TextObject';
 import { Ticker } from './Ticker';
+import { VideoObject } from './VideoObject';
 
 export interface Element<Properties extends ElementProperties, Options> {
   transition(
@@ -556,9 +557,104 @@ export class AudioElement extends BaseElement<
   snap(propertyMatcher: Matcher) {
     const object = this.object;
     if (object && propertyMatcher.match('playback')) {
-      const howl = object.howl;
-      if (!howl.loop()) {
-        howl.stop();
+      if (!object.loop) {
+        object.howl.stop();
+      }
+    }
+
+    super.snap(propertyMatcher);
+  }
+}
+
+export class VideoElement extends BaseElement<
+  VideoObject,
+  VideoElementProperties,
+  VideoElementResolvedProperties,
+  unknown
+> {
+  constructor(
+    private readonly package_: Package,
+    private readonly container: HTMLElement,
+    private readonly index: number,
+    ticker: Ticker,
+  ) {
+    super(ticker, true);
+  }
+
+  protected resolveProperties(
+    properties: VideoElementProperties,
+    _object: VideoObject,
+    valueChanged: boolean,
+    _options: unknown,
+  ): VideoElementResolvedProperties {
+    return VideoElementResolvedProperties.resolve(properties, {
+      valueChanged,
+    });
+  }
+
+  protected async createObject(
+    type: string,
+    value: string,
+  ): Promise<VideoObject> {
+    const blob = await this.package_.getBlob(type, value);
+    const blobUrl = URL.createObjectURL(blob);
+    try {
+      const video = new VideoObject();
+      await video.load(blobUrl);
+      return video;
+    } catch (e) {
+      URL.revokeObjectURL(blobUrl);
+      throw e;
+    }
+  }
+
+  protected destroyObject(object: VideoObject) {
+    URL.revokeObjectURL(object.element.src);
+  }
+
+  protected attachObject(object: VideoObject) {
+    addElementToContainer(this.container, this.index, object.element);
+    // noinspection JSIgnoredPromiseFromCall
+    object.element.play();
+  }
+
+  protected detachObject(object: VideoObject) {
+    object.element.pause();
+    object.element.remove();
+  }
+
+  protected getPropertyValue(
+    object: VideoObject,
+    propertyName: keyof VideoElementResolvedProperties,
+  ): VideoElementResolvedProperties[typeof propertyName] {
+    return object.getPropertyValue(propertyName);
+  }
+
+  protected setPropertyValue(
+    object: VideoObject,
+    propertyName: keyof VideoElementResolvedProperties,
+    propertyValue: VideoElementResolvedProperties[typeof propertyName],
+  ) {
+    object.setPropertyValue(propertyName, propertyValue);
+  }
+
+  wait(propertyMatcher: Matcher): Promise<void> {
+    const superPromise = super.wait(propertyMatcher);
+
+    const object = this.object;
+    if (object && propertyMatcher.match('playback')) {
+      const playbackPromise = object.createPlaybackPromise();
+      return Promise.all([superPromise, playbackPromise]).then(() => {});
+    } else {
+      return superPromise;
+    }
+  }
+
+  snap(propertyMatcher: Matcher) {
+    const object = this.object;
+    if (object && propertyMatcher.match('playback')) {
+      if (!object.loop) {
+        object.element.pause();
       }
     }
 

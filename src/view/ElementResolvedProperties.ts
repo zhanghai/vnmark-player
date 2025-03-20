@@ -12,6 +12,7 @@ import {
   StringValue,
   TextElementProperties,
   TimeValue,
+  VideoElementProperties,
   ZeroValue,
 } from '../engine';
 import { ViewError } from './View';
@@ -291,6 +292,40 @@ export namespace AudioElementResolvedProperties {
       resolvePropertyValue(properties.loop, it => BooleanValue.resolve(it)) ??
       defaultLoop;
     return { value, volume, loop };
+  }
+}
+
+export interface VideoElementResolvedProperties {
+  readonly value: number;
+  readonly alpha: number;
+  readonly volume: number;
+  readonly loop: boolean;
+}
+
+export namespace VideoElementResolvedProperties {
+  export interface ResolveOptions {
+    valueChanged: boolean;
+  }
+
+  export function resolve(
+    properties: VideoElementProperties,
+    options: ResolveOptions,
+  ): VideoElementResolvedProperties {
+    const value = options.valueChanged ? 0 : 1;
+    const alpha =
+      resolvePropertyValue(
+        properties.alpha,
+        it => NumberValue.resolve(it) ?? PercentageValue.resolve(it, 1),
+      ) ?? 1;
+    const volume =
+      resolvePropertyValue(
+        properties.volume,
+        it => NumberValue.resolve(it) ?? PercentageValue.resolve(it, 1),
+      ) ?? 1;
+    const loop =
+      resolvePropertyValue(properties.loop, it => BooleanValue.resolve(it)) ??
+      false;
+    return { value, alpha, volume, loop };
   }
 }
 

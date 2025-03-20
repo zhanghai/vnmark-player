@@ -14,6 +14,7 @@ import {
   FigureElementTransitionOptions,
   ImageElement,
   TextElement,
+  VideoElement,
 } from './Element';
 import { resolveElementValue } from './ElementResolvedProperties';
 import { Layout } from './Layout';
@@ -168,7 +169,14 @@ export class View {
             element = new AudioElement(this.engine.package_, this.auralTicker);
             break;
           case 'video':
-            // TODO
+            if (layoutElement) {
+              element = new VideoElement(
+                this.engine.package_,
+                layoutElement,
+                elementProperties.index,
+                this.visualTicker,
+              );
+            }
             break;
           case 'effect':
             // TODO

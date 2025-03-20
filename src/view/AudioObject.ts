@@ -120,23 +120,22 @@ export class AudioObject {
 
   createPlaybackPromise(): Promise<AudioObject> {
     return new Promise((resolve, reject) => {
-      const howl = this.howl;
-      if (howl.loop() || !howl.playing()) {
+      if (this.howl.loop() || !this.howl.playing()) {
         resolve(this);
         return;
       }
-      howl
-        .once('playerror', (_, error) => {
-          howl.off('end').off('stop');
-          reject(error);
+      this.howl
+        .once('stop', () => {
+          this.howl.off('playerror').off('end');
+          resolve(this);
         })
         .once('end', () => {
-          howl.off('playerror').off('stop');
+          this.howl.off('playerror').off('stop');
           resolve(this);
         })
-        .once('stop', () => {
-          howl.off('playerror').off('end');
-          resolve(this);
+        .once('playerror', (_, error) => {
+          this.howl.off('end').off('stop');
+          reject(error);
         });
     });
   }

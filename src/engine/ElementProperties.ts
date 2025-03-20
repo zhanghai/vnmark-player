@@ -75,6 +75,9 @@ export interface AudioElementProperties extends BaseElementProperties {
 
 export interface VideoElementProperties extends BaseElementProperties {
   readonly type: 'video';
+  readonly alpha?: NumberValue | PercentageValue;
+  readonly volume?: NumberValue | PercentageValue;
+  readonly loop?: BooleanValue;
 }
 
 export interface EffectElementProperties extends BaseElementProperties {
