@@ -1,4 +1,4 @@
-import { ELEMENT_TYPES, ElementType } from '../engine';
+import { ELEMENT_TYPE_STRINGS, ELEMENT_TYPES, ElementType } from '../engine';
 import { Transition } from '../transition';
 import { Arrays2, HTMLElements, Maps } from '../util';
 import { Ticker } from './Ticker';
@@ -24,7 +24,7 @@ export class Layout {
     rootElement: HTMLElement,
     private readonly ticker: Ticker,
   ) {
-    const layoutNameSet = new Set<string>();
+    const layoutNameSet = new Set(['none']);
     this.elementLayouts = new Map();
     HTMLElements.forEachDescendant(rootElement, element => {
       const layoutNames = getElementLayoutNames(element);
@@ -39,7 +39,6 @@ export class Layout {
         return true;
       }
     });
-    layoutNameSet.add('none');
     this.layoutNames = Array.from(layoutNameSet).sort();
 
     this.layoutTypeElements = new Map();
@@ -48,7 +47,7 @@ export class Layout {
       if (!elementType) {
         return true;
       }
-      if (!ELEMENT_TYPES.includes(elementType)) {
+      if (!ELEMENT_TYPE_STRINGS.includes(elementType)) {
         throw new ViewError(`Unknown element type "${elementType}"`);
       }
       const layoutNames =
@@ -128,18 +127,18 @@ export class Layout {
       }
     }
 
-    const exitElementTypes: ElementType[] = [];
+    const exitElementTypes = new Set(ELEMENT_TYPES);
     const oldTypeElements = this.layoutTypeElements.get(oldLayoutName);
-    if (oldTypeElements) {
-      const newTypeElements = this.layoutTypeElements.get(newLayoutName);
+    const newTypeElements = this.layoutTypeElements.get(newLayoutName);
+    if (oldTypeElements && newTypeElements) {
       for (const [elementType, oldElement] of oldTypeElements) {
-        const newElement = newTypeElements?.get(elementType);
-        if (oldElement !== newElement) {
-          exitElementTypes.push(elementType);
+        const newElement = newTypeElements.get(elementType);
+        if (oldElement === newElement) {
+          exitElementTypes.delete(elementType);
         }
       }
     }
-    yield exitElementTypes;
+    yield Array.from(exitElementTypes).sort();
 
     if (enterElements.length) {
       for (const enterElement of enterElements) {
