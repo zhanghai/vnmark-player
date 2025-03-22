@@ -36,7 +36,7 @@ export class View {
   private readonly visualTicker = new Ticker();
   private readonly auralTicker = new Ticker();
 
-  private onPointerUpOnce: (() => void) | undefined;
+  private onSkipOnce: (() => void) | undefined;
 
   constructor(
     private readonly rootElement: HTMLElement,
@@ -47,10 +47,20 @@ export class View {
     await this.loadTemplate();
 
     this.layout = new Layout(this.rootElement, this.visualTicker);
-    this.layout.pointerElement.addEventListener('pointerup', () => {
-      if (this.onPointerUpOnce) {
-        this.onPointerUpOnce();
-        this.onPointerUpOnce = undefined;
+    this.layout.pointerElement.addEventListener('pointerup', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (this.onSkipOnce) {
+        this.onSkipOnce();
+        this.onSkipOnce = undefined;
+      }
+    });
+    this.layout.pointerElement.addEventListener('wheel', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.deltaY > 0 && this.onSkipOnce) {
+        this.onSkipOnce();
+        this.onSkipOnce = undefined;
       }
     });
 
@@ -242,7 +252,7 @@ export class View {
     switch (options.type) {
       case 'pause':
         return new Promise<void>(resolve => {
-          this.onPointerUpOnce = resolve;
+          this.onSkipOnce = resolve;
         }).then(() => true);
       case 'set_layout': {
         const newLayoutName = options.layoutName;
@@ -253,7 +263,7 @@ export class View {
         return Promise.race([
           this.layout.wait(),
           new Promise<void>(resolve => {
-            this.onPointerUpOnce = resolve;
+            this.onSkipOnce = resolve;
           }),
         ])
           .then(() => {
@@ -274,7 +284,7 @@ export class View {
             Promise.race([
               this.layout.wait(),
               new Promise<void>(resolve => {
-                this.onPointerUpOnce = resolve;
+                this.onSkipOnce = resolve;
               }),
             ]),
           )
@@ -289,7 +299,7 @@ export class View {
             setTimeout(() => resolve(), options.durationMillis),
           ),
           new Promise<void>(resolve => {
-            this.onPointerUpOnce = resolve;
+            this.onSkipOnce = resolve;
           }),
         ]).then(() => true);
       }
@@ -310,7 +320,7 @@ export class View {
             ),
           ),
           new Promise<void>(resolve => {
-            this.onPointerUpOnce = resolve;
+            this.onSkipOnce = resolve;
           }),
         ]).then(() => true);
       default:
