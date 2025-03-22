@@ -5,7 +5,8 @@ import {
   ElementProperties,
   ImageElementProperties,
   Matcher,
-  TextElementProperties, VideoElementProperties,
+  TextElementProperties,
+  VideoElementProperties,
 } from '../engine';
 import { Package } from '../package';
 import { Transition } from '../transition';
@@ -15,7 +16,8 @@ import {
   ImageElementResolvedProperties,
   resolveElementTransitionDuration,
   resolveElementValue,
-  TextElementResolvedProperties, VideoElementResolvedProperties,
+  TextElementResolvedProperties,
+  VideoElementResolvedProperties,
 } from './ElementResolvedProperties';
 import { ImageObject } from './ImageObject';
 import { TextObject } from './TextObject';
