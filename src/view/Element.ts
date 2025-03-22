@@ -376,12 +376,15 @@ export class ImageElement extends BaseElement<
       const image = new ImageObject(this.package_.manifest.density);
       await image.load(blobUrl);
       return image;
-    } finally {
+    } catch (e) {
       URL.revokeObjectURL(blobUrl);
+      throw e;
     }
   }
 
-  protected destroyObject(_object: ImageObject) {}
+  protected destroyObject(object: ImageObject) {
+    URL.revokeObjectURL(object.element.src);
+  }
 
   protected attachObject(object: ImageObject) {
     this.layer.appendChild(object.element);
@@ -404,6 +407,12 @@ export class ImageElement extends BaseElement<
     propertyValue: ImageElementResolvedProperties[typeof propertyName],
   ) {
     object.setPropertyValue(propertyName, propertyValue);
+  }
+
+  destroy() {
+    super.destroy();
+
+    this.layer.remove();
   }
 }
 
