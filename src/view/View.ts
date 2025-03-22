@@ -91,8 +91,9 @@ export class View {
               try {
                 element.src = blobUrl;
                 await element.decode();
-              } finally {
+              } catch (e) {
                 URL.revokeObjectURL(blobUrl);
+                throw e;
               }
             }),
           );
