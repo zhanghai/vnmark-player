@@ -75,12 +75,11 @@ export class View {
     const template = await (
       await package_.getBlob('template', package_.manifest.template)
     ).text();
-    const foreignFragment = DOMPurity.sanitize(template, {
+    const fragment = DOMPurity.sanitize(template, {
       RETURN_DOM_FRAGMENT: true,
     });
-    // Document fragment with a different owner document won't be able to decode images.
-    const fragment = document.createDocumentFragment();
-    fragment.appendChild(foreignFragment);
+    // Adopt document fragment to allow decoding images.
+    document.adoptNode(fragment);
     const promises: Promise<void>[] = [];
     HTMLElements.forEachDescendant(fragment, element => {
       if (element instanceof HTMLImageElement) {
