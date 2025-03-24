@@ -9,11 +9,15 @@ const LAYOUT_TRANSITION_DURATION = 500;
 export class Layout {
   private readonly layoutNames: string[];
   private readonly elementLayouts: Map<HTMLElement, string[]>;
-  private readonly layoutTypeElements: Map<
+  private readonly layoutTypeContainerElements: Map<
     string,
     Map<ElementType, HTMLElement>
   >;
-  readonly pointerElement: HTMLElement;
+  private readonly layoutTypeTemplateElements: Map<
+    string,
+    Map<ElementType, HTMLElement>
+  >;
+  readonly interactionElement: HTMLElement;
 
   private layoutName = 'none';
 
@@ -41,8 +45,40 @@ export class Layout {
     });
     this.layoutNames = Array.from(layoutNameSet).sort();
 
-    this.layoutTypeElements = new Map();
+    const templateElement = HTMLElements.firstDescendantOrUndefined(
+      rootElement,
+      it => it.dataset.id === 'template',
+    );
+    this.layoutTypeContainerElements = this.getLayoutTypeElements(
+      rootElement,
+      templateElement,
+    );
+    if (templateElement) {
+      this.layoutTypeTemplateElements =
+        this.getLayoutTypeElements(templateElement);
+    } else {
+      this.layoutTypeTemplateElements = new Map();
+    }
+
+    const interactionElement = HTMLElements.firstDescendantOrUndefined(
+      rootElement,
+      it => it.dataset.id === 'interaction',
+    );
+    if (!interactionElement) {
+      throw new ViewError('Missing pointer element');
+    }
+    this.interactionElement = interactionElement;
+  }
+
+  private getLayoutTypeElements(
+    rootElement: HTMLElement,
+    excludedElement?: HTMLElement,
+  ): Map<string, Map<ElementType, HTMLElement>> {
+    const layoutTypeElements = new Map<string, Map<ElementType, HTMLElement>>();
     HTMLElements.forEachDescendant(rootElement, element => {
+      if (element === excludedElement) {
+        return false;
+      }
       const elementType = element.dataset.type;
       if (!elementType) {
         return true;
@@ -61,7 +97,7 @@ export class Layout {
         ) ?? this.layoutNames;
       for (const layoutName of layoutNames) {
         const typeElements = Maps.getOrSet(
-          this.layoutTypeElements,
+          layoutTypeElements,
           layoutName,
           () => new Map(),
         );
@@ -74,22 +110,21 @@ export class Layout {
       }
       return false;
     });
-
-    const pointerElement = HTMLElements.firstDescendantOrUndefined(
-      rootElement,
-      it => it.dataset.id === 'pointer',
-    );
-    if (!pointerElement) {
-      throw new ViewError('Missing pointer element');
-    }
-    this.pointerElement = pointerElement;
+    return layoutTypeElements;
   }
 
-  getElement(
+  getContainerElement(
     layoutName: string,
     elementType: ElementType,
   ): HTMLElement | undefined {
-    return this.layoutTypeElements.get(layoutName)?.get(elementType);
+    return this.layoutTypeContainerElements.get(layoutName)?.get(elementType);
+  }
+
+  getTemplateElement(
+    layoutName: string,
+    elementType: ElementType,
+  ): HTMLElement | undefined {
+    return this.layoutTypeTemplateElements.get(layoutName)?.get(elementType);
   }
 
   *transition(layoutName: string): Generator<ElementType[], void, void> {
@@ -128,8 +163,8 @@ export class Layout {
     }
 
     const exitElementTypes = new Set(ELEMENT_TYPES);
-    const oldTypeElements = this.layoutTypeElements.get(oldLayoutName);
-    const newTypeElements = this.layoutTypeElements.get(newLayoutName);
+    const oldTypeElements = this.layoutTypeContainerElements.get(oldLayoutName);
+    const newTypeElements = this.layoutTypeContainerElements.get(newLayoutName);
     if (oldTypeElements && newTypeElements) {
       for (const [elementType, oldElement] of oldTypeElements) {
         const newElement = newTypeElements.get(elementType);
@@ -183,5 +218,5 @@ function getElementLayoutNames(element: HTMLElement): string[] {
   if (!layoutNamesString) {
     return [];
   }
-  return layoutNamesString.split('[\t\n\f\r ]+').sort();
+  return layoutNamesString.split(/[\t\n\f\r ]+/).sort();
 }

@@ -1,5 +1,6 @@
 import DOMPurity from 'dompurify';
 import { MultiMap } from 'mnemonist';
+
 import {
   ElementProperties,
   ElementType,
@@ -10,6 +11,7 @@ import { HTMLElements, Numbers } from '../util';
 import {
   AudioElement,
   AvatarElementTransitionOptions,
+  ChoiceElement,
   Element,
   FigureElementTransitionOptions,
   ImageElement,
@@ -36,7 +38,7 @@ export class View {
   private readonly visualTicker = new Ticker();
   private readonly auralTicker = new Ticker();
 
-  private onSkipOnce: (() => void) | undefined;
+  private onContinueOnce: (() => void) | undefined;
 
   constructor(
     private readonly rootElement: HTMLElement,
@@ -47,20 +49,49 @@ export class View {
     await this.loadTemplate();
 
     this.layout = new Layout(this.rootElement, this.visualTicker);
-    this.layout.pointerElement.addEventListener('pointerup', event => {
+    this.layout.interactionElement.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
-      if (this.onSkipOnce) {
-        this.onSkipOnce();
-        this.onSkipOnce = undefined;
+      this.onContinue(false);
+    });
+    this.layout.interactionElement.addEventListener('wheel', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.deltaY > 0) {
+        this.onContinue(false);
       }
     });
-    this.layout.pointerElement.addEventListener('wheel', event => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.deltaY > 0 && this.onSkipOnce) {
-        this.onSkipOnce();
-        this.onSkipOnce = undefined;
+    this.layout.interactionElement.addEventListener('keydown', event => {
+      if (
+        event.key === 'Enter' &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.shiftKey &&
+        !event.repeat &&
+        !event.isComposing
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.onContinue(false);
+      } else if (
+        event.key === 'Control' &&
+        !event.metaKey &&
+        !event.altKey &&
+        !event.shiftKey &&
+        !event.isComposing
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        // TODO: Keep skipping
+        this.onContinue(false);
+      }
+    });
+    this.layout.interactionElement.addEventListener('keyup', event => {
+      if (event.key === 'Control') {
+        event.preventDefault();
+        event.stopPropagation();
+        // TODO: Stop skipping
       }
     });
 
@@ -78,7 +109,7 @@ export class View {
     const fragment = DOMPurity.sanitize(template, {
       RETURN_DOM_FRAGMENT: true,
     });
-    // Adopt document fragment to allow decoding images.
+    // Adopt document fragment to allow decoding media.
     document.adoptNode(fragment);
     const promises: Promise<void>[] = [];
     HTMLElements.forEachDescendant(fragment, element => {
@@ -98,11 +129,41 @@ export class View {
             }),
           );
         }
+      } else if (element instanceof HTMLAudioElement) {
+        const src = element.dataset.src;
+        if (src) {
+          promises.push(
+            package_.getBlob('template', src).then(async blob => {
+              const blobUrl = URL.createObjectURL(blob);
+              try {
+                await HTMLElements.audioDecode(element, blobUrl);
+              } catch (e) {
+                URL.revokeObjectURL(blobUrl);
+                throw e;
+              }
+            }),
+          );
+        }
       }
       return true;
     });
     await Promise.all(promises);
     this.rootElement.appendChild(fragment);
+  }
+
+  private onContinue(fromChoice: boolean) {
+    if (!fromChoice) {
+      const hasChoice = Object.values(this.engine.state.elements).some(
+        it => it.type === 'choice' && resolveElementValue(it),
+      );
+      if (hasChoice) {
+        return;
+      }
+    }
+    if (this.onContinueOnce) {
+      this.onContinueOnce();
+      this.onContinueOnce = undefined;
+    }
   }
 
   async update(options: UpdateViewOptions): Promise<boolean> {
@@ -143,14 +204,21 @@ export class View {
       let element = this.elements.get(elementName);
       const elementType = elementProperties.type;
       if (!element && resolveElementValue(elementProperties)) {
-        const layoutElement = this.layout.getElement(layoutName, elementType);
+        const containerElement = this.layout.getContainerElement(
+          layoutName,
+          elementType,
+        );
+        const templateElement = this.layout.getTemplateElement(
+          layoutName,
+          elementType,
+        );
         switch (elementType) {
           case 'name':
           case 'text':
-            if (layoutElement) {
+            if (containerElement) {
               element = new TextElement(
                 this.engine.package_,
-                layoutElement,
+                containerElement,
                 elementProperties.index,
                 this.visualTicker,
                 elementType === 'text',
@@ -158,16 +226,31 @@ export class View {
             }
             break;
           case 'choice':
-            // TODO
+            if (containerElement) {
+              if (!templateElement) {
+                throw new ViewError('Missing choice template element');
+              }
+              element = new ChoiceElement(
+                this.engine.package_,
+                containerElement,
+                elementProperties.index,
+                templateElement,
+                script => {
+                  this.engine.evaluateScript(script);
+                  this.onContinue(true);
+                },
+                this.visualTicker,
+              );
+            }
             break;
           case 'background':
           case 'figure':
           case 'foreground':
           case 'avatar':
-            if (layoutElement) {
+            if (containerElement) {
               element = new ImageElement(
                 this.engine.package_,
-                layoutElement,
+                containerElement,
                 elementProperties.index,
                 this.visualTicker,
               );
@@ -179,10 +262,10 @@ export class View {
             element = new AudioElement(this.engine.package_, this.auralTicker);
             break;
           case 'video':
-            if (layoutElement) {
+            if (containerElement) {
               element = new VideoElement(
                 this.engine.package_,
-                layoutElement,
+                containerElement,
                 elementProperties.index,
                 this.visualTicker,
               );
@@ -210,16 +293,16 @@ export class View {
           } satisfies FigureElementTransitionOptions;
           break;
         case 'avatar': {
-          const layoutElement = this.layout.getElement(
+          const containerElement = this.layout.getContainerElement(
             layoutName,
             elementType,
           )!;
           transitionOptions = {
             avatarPositionX: Numbers.parseFloatOrThrow(
-              layoutElement.dataset.positionX!,
+              containerElement.dataset.positionX!,
             ),
             avatarPositionY: Numbers.parseFloatOrThrow(
-              layoutElement.dataset.positionY!,
+              containerElement.dataset.positionY!,
             ),
           } satisfies AvatarElementTransitionOptions;
         }
@@ -252,7 +335,7 @@ export class View {
     switch (options.type) {
       case 'pause':
         return new Promise<void>(resolve => {
-          this.onSkipOnce = resolve;
+          this.onContinueOnce = resolve;
         }).then(() => true);
       case 'set_layout': {
         const newLayoutName = options.layoutName;
@@ -263,7 +346,7 @@ export class View {
         return Promise.race([
           this.layout.wait(),
           new Promise<void>(resolve => {
-            this.onSkipOnce = resolve;
+            this.onContinueOnce = resolve;
           }),
         ])
           .then(() => {
@@ -284,7 +367,7 @@ export class View {
             Promise.race([
               this.layout.wait(),
               new Promise<void>(resolve => {
-                this.onSkipOnce = resolve;
+                this.onContinueOnce = resolve;
               }),
             ]),
           )
@@ -299,7 +382,7 @@ export class View {
             setTimeout(() => resolve(), options.durationMillis),
           ),
           new Promise<void>(resolve => {
-            this.onSkipOnce = resolve;
+            this.onContinueOnce = resolve;
           }),
         ]).then(() => true);
       }
@@ -320,7 +403,7 @@ export class View {
             ),
           ),
           new Promise<void>(resolve => {
-            this.onSkipOnce = resolve;
+            this.onContinueOnce = resolve;
           }),
         ]).then(() => true);
       default:

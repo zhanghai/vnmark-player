@@ -2,6 +2,7 @@ import { MultiMap } from 'mnemonist';
 
 import {
   AudioElementProperties,
+  ChoiceElementProperties,
   ElementProperties,
   ImageElementProperties,
   Matcher,
@@ -11,8 +12,10 @@ import {
 import { Package } from '../package';
 import { Transition } from '../transition';
 import { AudioObject } from './AudioObject';
+import { ChoiceObject } from './ChoiceObject';
 import {
   AudioElementResolvedProperties,
+  ChoiceElementResolvedProperties,
   ImageElementResolvedProperties,
   resolveElementTransitionDuration,
   resolveElementValue,
@@ -482,6 +485,68 @@ export class TextElement extends BaseElement<
     object: TextObject,
     propertyName: keyof TextElementResolvedProperties,
     propertyValue: TextElementResolvedProperties[typeof propertyName],
+  ) {
+    object.setPropertyValue(propertyName, propertyValue);
+  }
+}
+
+export class ChoiceElement extends BaseElement<
+  ChoiceObject,
+  ChoiceElementProperties,
+  ChoiceElementResolvedProperties,
+  unknown
+> {
+  constructor(
+    // @ts-expect-error TS6138
+    private readonly package_: Package,
+    private readonly container: HTMLElement,
+    private readonly index: number,
+    private readonly template: HTMLElement,
+    private readonly onClick: (script: string) => void,
+    ticker: Ticker,
+  ) {
+    super(ticker, false);
+  }
+
+  protected resolveProperties(
+    properties: ChoiceElementProperties,
+    _object: ChoiceObject,
+    valueChanged: boolean,
+    _options: unknown,
+  ): ChoiceElementResolvedProperties {
+    return ChoiceElementResolvedProperties.resolve(properties, {
+      valueChanged,
+    });
+  }
+
+  protected async createObject(
+    _type: string,
+    value: string,
+  ): Promise<ChoiceObject> {
+    return new ChoiceObject(this.template, value, this.onClick);
+  }
+
+  protected destroyObject(_object: ChoiceObject) {}
+
+  protected attachObject(object: ChoiceObject) {
+    addElementToContainer(this.container, this.index, object.element);
+  }
+
+  protected detachObject(object: ChoiceObject) {
+    object.element.remove();
+  }
+
+  protected getPropertyValue(
+    object: ChoiceObject,
+    propertyName: keyof ChoiceElementResolvedProperties,
+  ): ChoiceElementResolvedProperties[typeof propertyName] {
+    return object.getPropertyValue(propertyName);
+  }
+
+  protected setPropertyValue(
+    object: ChoiceObject,
+    propertyName: keyof ChoiceElementResolvedProperties,
+    propertyValue: ChoiceElementResolvedProperties[typeof propertyName],
   ) {
     object.setPropertyValue(propertyName, propertyValue);
   }

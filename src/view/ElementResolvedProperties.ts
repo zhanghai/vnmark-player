@@ -3,6 +3,7 @@ import {
   AudioElementProperties,
   BaseElementProperties,
   BooleanValue,
+  ChoiceElementProperties,
   ImageElementProperties,
   LengthValue,
   NoneValue,
@@ -256,6 +257,33 @@ export namespace TextElementResolvedProperties {
   ): TextElementResolvedProperties {
     const value = options.valueChanged ? 0 : 1;
     return { value };
+  }
+}
+
+export interface ChoiceElementResolvedProperties
+  extends TextElementResolvedProperties {
+  readonly enabled: boolean;
+  readonly script: string;
+}
+
+export namespace ChoiceElementResolvedProperties {
+  export interface ResolveOptions {
+    valueChanged: boolean;
+  }
+
+  export function resolve(
+    properties: ChoiceElementProperties,
+    options: ResolveOptions,
+  ): ChoiceElementResolvedProperties {
+    const value = options.valueChanged ? 0 : 1;
+    const enabled =
+      resolvePropertyValue(properties.enabled, it =>
+        BooleanValue.resolve(it),
+      ) ?? true;
+    const script =
+      resolvePropertyValue(properties.script, it => StringValue.resolve(it)) ??
+      '';
+    return { value, enabled, script };
   }
 }
 

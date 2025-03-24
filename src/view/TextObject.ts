@@ -1,6 +1,6 @@
 import DOMPurity from 'dompurify';
-import { HTMLElements } from '../util';
 
+import { HTMLElements } from '../util';
 import { TextElementResolvedProperties } from './ElementResolvedProperties';
 import { ViewError } from './View';
 

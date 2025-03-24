@@ -71,4 +71,50 @@ export namespace HTMLElements {
       element.removeAttribute('style');
     }
   }
+
+  export function someChild(
+    elementExclusive: Node,
+    predicate: (element: HTMLElement) => boolean,
+  ): boolean {
+    for (const childNode of elementExclusive.childNodes) {
+      if (!(childNode instanceof HTMLElement)) {
+        continue;
+      }
+      if (predicate(childNode)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  export function audioDecode(
+    element: HTMLAudioElement,
+    src: string,
+  ): Promise<void> {
+    if (element.src) {
+      throw new Error(`Audio element already has a src "${src}"`);
+    }
+    return new Promise((resolve, reject) => {
+      const abortController = new AbortController();
+      const signal = abortController.signal;
+      element.addEventListener(
+        'canplaythrough',
+        () => {
+          abortController.abort();
+          resolve();
+        },
+        { signal },
+      );
+      element.addEventListener(
+        'error',
+        event => {
+          abortController.abort();
+          reject(event);
+        },
+        { signal },
+      );
+      element.src = src;
+      element.load();
+    });
+  }
 }
