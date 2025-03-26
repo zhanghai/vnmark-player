@@ -137,7 +137,7 @@ const COMMAND_ARRAY: Command[] = [
     },
   },
   {
-    name: 'sleep',
+    name: 'delay',
     argumentCount: 1,
     async execute(engine, arguments_) {
       const [durationMillisString] = arguments_;
@@ -152,7 +152,7 @@ const COMMAND_ARRAY: Command[] = [
           `Duration millis ${durationMillis} is not a non-negative integer`,
         );
       }
-      return await engine.updateView({ type: 'sleep', durationMillis });
+      return await engine.updateView({ type: 'delay', durationMillis });
     },
   },
   {

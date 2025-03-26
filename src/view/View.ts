@@ -376,7 +376,7 @@ export class View {
           })
           .then(() => true);
       }
-      case 'sleep': {
+      case 'delay': {
         return Promise.race([
           new Promise<void>(resolve =>
             setTimeout(() => resolve(), options.durationMillis),
