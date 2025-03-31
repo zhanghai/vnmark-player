@@ -23,7 +23,6 @@ export class ChoiceObject {
       event.preventDefault();
       event.stopPropagation();
       onClick(this.script);
-      // TODO: Execute script and end pausing.
     });
     this.hoverAudioElement = HTMLElements.firstDescendantOrUndefined(
       this.element,
