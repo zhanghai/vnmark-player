@@ -52,7 +52,7 @@ export function resolveElementTransitionDuration(
       defaultTransitionDuration = 50 * elementCount;
       break;
     case 'choice':
-      defaultTransitionDuration = 0;
+      defaultTransitionDuration = 500;
       break;
     case 'music':
       defaultTransitionDuration = 1000;
