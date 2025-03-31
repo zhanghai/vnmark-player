@@ -38,7 +38,12 @@ export class View {
   private readonly visualTicker = new Ticker();
   private readonly auralTicker = new Ticker();
 
-  private onContinueOnce: (() => void) | undefined;
+  private onContinue: (() => void) | undefined;
+  private onSkip: (() => void) | undefined;
+  private onChoose: ((script: string) => void) | undefined;
+
+  private skippedLastWait: boolean = false;
+  private isSkipping: boolean = false;
 
   constructor(
     private readonly rootElement: HTMLElement,
@@ -52,16 +57,16 @@ export class View {
     this.layout.interactionElement.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
-      this.onContinue(false);
+      this.onClick();
     });
     this.layout.interactionElement.addEventListener('wheel', event => {
       event.preventDefault();
       event.stopPropagation();
       if (event.deltaY > 0) {
-        this.onContinue(false);
+        this.onClick();
       }
     });
-    this.layout.interactionElement.addEventListener('keydown', event => {
+    document.addEventListener('keydown', event => {
       if (
         event.key === 'Enter' &&
         !event.metaKey &&
@@ -73,7 +78,7 @@ export class View {
       ) {
         event.preventDefault();
         event.stopPropagation();
-        this.onContinue(false);
+        this.onClick();
       } else if (
         event.key === 'Control' &&
         !event.metaKey &&
@@ -83,15 +88,15 @@ export class View {
       ) {
         event.preventDefault();
         event.stopPropagation();
-        // TODO: Keep skipping
-        this.onContinue(false);
+        this.isSkipping = true;
+        this.onClick();
       }
     });
-    this.layout.interactionElement.addEventListener('keyup', event => {
+    document.addEventListener('keyup', event => {
       if (event.key === 'Control') {
         event.preventDefault();
         event.stopPropagation();
-        // TODO: Stop skipping
+        this.isSkipping = false;
       }
     });
 
@@ -151,19 +156,42 @@ export class View {
     this.rootElement.appendChild(fragment);
   }
 
-  private onContinue(fromChoice: boolean) {
-    if (!fromChoice) {
-      const hasChoice = Object.values(this.engine.state.elements).some(
-        it => it.type === 'choice' && resolveElementValue(it),
-      );
-      if (hasChoice) {
-        return;
-      }
+  private onClick() {
+    if (this.onContinue) {
+      this.onContinue();
+      this.onContinue = undefined;
+    } else if (this.onSkip) {
+      this.skippedLastWait = true;
+      this.onSkip();
+      this.onSkip = undefined;
     }
-    if (this.onContinueOnce) {
-      this.onContinueOnce();
-      this.onContinueOnce = undefined;
+  }
+
+  private onChoiceClick(script: string) {
+    if (this.onChoose) {
+      this.onChoose(script);
+      this.onChoose = undefined;
     }
+  }
+
+  private waitOrSkip(
+    promise: Promise<void>,
+    keepSkipping: boolean = false,
+  ): Promise<void> {
+    if (
+      this.isSkipping ||
+      (this.skippedLastWait &&
+        (keepSkipping || this.engine.state.keepSkippingWait))
+    ) {
+      return Promise.resolve();
+    }
+    this.skippedLastWait = false;
+    return Promise.race([
+      promise,
+      new Promise<void>(resolve => {
+        this.onSkip = resolve;
+      }),
+    ]);
   }
 
   async update(options: UpdateViewOptions): Promise<boolean> {
@@ -235,10 +263,7 @@ export class View {
                 containerElement,
                 elementProperties.index,
                 templateElement,
-                script => {
-                  this.engine.evaluateScript(script);
-                  this.onContinue(true);
-                },
+                it => this.onChoiceClick(it),
                 this.visualTicker,
               );
             }
@@ -300,9 +325,11 @@ export class View {
           transitionOptions = {
             avatarPositionX: Numbers.parseFloatOrThrow(
               containerElement.dataset.positionX!,
+              ViewError,
             ),
             avatarPositionY: Numbers.parseFloatOrThrow(
               containerElement.dataset.positionY!,
+              ViewError,
             ),
           } satisfies AvatarElementTransitionOptions;
         }
@@ -331,24 +358,32 @@ export class View {
       }
     });
 
-    // TODO: Skip wait if interrupted until continued.
     switch (options.type) {
-      case 'pause':
+      case 'pause': {
+        const hasChoice = Object.values(elementPropertiesMap).some(
+          it => it.type === 'choice' && resolveElementValue(it),
+        );
+        if (!hasChoice && this.isSkipping) {
+          return true;
+        }
         return new Promise<void>(resolve => {
-          this.onContinueOnce = resolve;
+          if (hasChoice) {
+            this.onChoose = script => {
+              this.engine.evaluateScript(script);
+              resolve();
+            };
+          } else {
+            this.onContinue = resolve;
+          }
         }).then(() => true);
+      }
       case 'set_layout': {
         const newLayoutName = options.layoutName;
         this.engine.setLayout(newLayoutName);
         const layoutTransitionGenerator = this.layout.transition(newLayoutName);
         const exitElementTypes = layoutTransitionGenerator.next()
           .value as ElementType[];
-        return Promise.race([
-          this.layout.wait(),
-          new Promise<void>(resolve => {
-            this.onContinueOnce = resolve;
-          }),
-        ])
+        return this.waitOrSkip(this.layout.wait())
           .then(() => {
             this.layout.snap();
             for (const elementType of exitElementTypes) {
@@ -363,28 +398,18 @@ export class View {
             }
             layoutTransitionGenerator.next();
           })
-          .then(() =>
-            Promise.race([
-              this.layout.wait(),
-              new Promise<void>(resolve => {
-                this.onContinueOnce = resolve;
-              }),
-            ]),
-          )
+          .then(() => this.waitOrSkip(this.layout.wait(), true))
           .then(() => {
             this.layout.snap();
           })
           .then(() => true);
       }
       case 'delay': {
-        return Promise.race([
+        return this.waitOrSkip(
           new Promise<void>(resolve =>
             setTimeout(() => resolve(), options.durationMillis),
           ),
-          new Promise<void>(resolve => {
-            this.onContinueOnce = resolve;
-          }),
-        ]).then(() => true);
+        ).then(() => true);
       }
       case 'snap':
         for (const [elementName, element] of this.elements) {
@@ -394,18 +419,15 @@ export class View {
         }
         return true;
       case 'wait':
-        return Promise.race([
+        return this.waitOrSkip(
           Promise.all(
             Array.from(this.elements).map(([elementName, element]) =>
               element.wait(
                 options.elementPropertyMatcher.getPropertyMatcher(elementName),
               ),
             ),
-          ),
-          new Promise<void>(resolve => {
-            this.onContinueOnce = resolve;
-          }),
-        ]).then(() => true);
+          ).then(() => {}),
+        ).then(() => true);
       default:
         // @ts-expect-error TS2339
         throw new ViewError(`Unexpected options type ${options.type}`);

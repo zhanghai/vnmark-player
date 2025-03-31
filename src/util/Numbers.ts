@@ -1,16 +1,22 @@
 export namespace Numbers {
-  export function parseFloatOrThrow(string: string): number {
-    const number = Number.parseFloat(string);
+  export function parseFloatOrThrow(
+    string: string,
+    errorConstructor: new (message: string) => Error,
+  ): number {
+    const number = Number(string);
     if (Number.isNaN(number)) {
-      throw new Error(`Invalid floating pointer number "${string}"`);
+      throw new errorConstructor(`Invalid floating pointer number "${string}"`);
     }
     return number;
   }
 
-  export function parseIntOrThrow(string: string, radix?: number): number {
-    const number = Number.parseInt(string, radix);
-    if (Number.isNaN(number)) {
-      throw new Error(`Invalid integer "${string}"`);
+  export function parseIntOrThrow(
+    string: string,
+    errorConstructor: new (message: string) => Error,
+  ): number {
+    const number = Number(string);
+    if (!Number.isInteger(number)) {
+      throw new errorConstructor(`Invalid integer "${string}"`);
     }
     return number;
   }

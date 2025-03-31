@@ -119,6 +119,7 @@ export interface State {
   readonly layoutName: string;
   readonly elements: Readonly<Record<string, ElementProperties>>;
   readonly scriptStates: Record<string, unknown>;
+  readonly keepSkippingWait: boolean;
 }
 
 export type ViewUpdater = (options: UpdateViewOptions) => Promise<boolean>;
@@ -158,6 +159,7 @@ export class Engine {
       layoutName: 'none',
       elements: {},
       scriptStates: {},
+      keepSkippingWait: false,
     };
 
     try {
@@ -373,14 +375,15 @@ export class Engine {
 
   async updateView(options: UpdateViewOptions): Promise<boolean> {
     const moveToNextLine = (await this.viewUpdater?.(options)) ?? true;
-    // Elements with value set to 'none' should be reset, i.e. removed. But we should do this after
-    // updating view so that transition properties can still apply to a change to 'none'.
+    // Elements with value set to 'none' should be reset, i.e. removed. But we should only do this
+    // after updating view so that transition properties can still apply to a change to 'none'.
     this.updateState(it => {
       for (const [elementName, element] of Object.entries(it.elements)) {
         if (element.value === undefined || element.value.type === 'none') {
           delete it.elements[elementName];
         }
       }
+      it.keepSkippingWait = false;
     });
     return moveToNextLine;
   }

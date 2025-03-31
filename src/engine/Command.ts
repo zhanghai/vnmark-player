@@ -1,3 +1,4 @@
+import { Numbers } from '../util';
 import { Property } from './ElementProperties';
 import { ElementPropertyMatcher } from './ElementPropertyMatcher';
 import { Engine, EngineError } from './Engine';
@@ -10,6 +11,21 @@ export interface Command {
 }
 
 const COMMAND_ARRAY: Command[] = [
+  {
+    name: 'delay',
+    argumentCount: 1,
+    async execute(engine, arguments_) {
+      const [durationMillisString] = arguments_;
+      const durationMillis = Numbers.parseIntOrThrow(
+        durationMillisString,
+        EngineError,
+      );
+      if (durationMillis < 0) {
+        throw new EngineError(`Negative duration millis ${durationMillis}`);
+      }
+      return await engine.updateView({ type: 'delay', durationMillis });
+    },
+  },
   {
     name: 'eval',
     argumentCount: 1,
@@ -137,22 +153,13 @@ const COMMAND_ARRAY: Command[] = [
     },
   },
   {
-    name: 'delay',
-    argumentCount: 1,
-    async execute(engine, arguments_) {
-      const [durationMillisString] = arguments_;
-      const durationMillis = Number(durationMillisString);
-      if (Number.isNaN(durationMillis)) {
-        throw new EngineError(
-          `Cannot parse duration millis "${durationMillisString}"`,
-        );
-      }
-      if (!Number.isInteger(durationMillis) || durationMillis < 0) {
-        throw new EngineError(
-          `Duration millis ${durationMillis} is not a non-negative integer`,
-        );
-      }
-      return await engine.updateView({ type: 'delay', durationMillis });
+    name: 'skip',
+    argumentCount: 0,
+    async execute(engine): Promise<boolean> {
+      engine.updateState(it => {
+        it.keepSkippingWait = true;
+      });
+      return true;
     },
   },
   {
