@@ -12,6 +12,7 @@ export class ChoiceObject {
   private _enabled = true;
   public script = '';
   private _visited = false;
+  private _selected = false;
 
   constructor(
     template: HTMLElement,
@@ -22,6 +23,7 @@ export class ChoiceObject {
     this.element.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
+      this.selected = true;
       onClick(this.script);
     });
     this.hoverAudioElement = HTMLElements.firstDescendantOrUndefined(
@@ -72,6 +74,15 @@ export class ChoiceObject {
   set visited(value: boolean) {
     this._visited = value;
     this.element.classList.toggle('visited', value);
+  }
+
+  get selected(): boolean {
+    return this._selected;
+  }
+
+  set selected(value: boolean) {
+    this._selected = value;
+    this.element.classList.toggle('selected', value);
   }
 
   getPropertyValue(
