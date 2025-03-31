@@ -10,13 +10,14 @@ import {
   VideoElementProperties,
 } from '../engine';
 import { Package } from '../package';
-import { Transition } from '../transition';
+import { CssEasings, Easing, LinearEasing, Transition } from '../transition';
 import { AudioObject } from './AudioObject';
 import { ChoiceObject } from './ChoiceObject';
 import {
   AudioElementResolvedProperties,
   ChoiceElementResolvedProperties,
   ImageElementResolvedProperties,
+  resolveElementPropertyTransitionEasing,
   resolveElementTransitionDuration,
   resolveElementValue,
   TextElementResolvedProperties,
@@ -26,6 +27,7 @@ import { ImageObject } from './ImageObject';
 import { TextObject } from './TextObject';
 import { Ticker } from './Ticker';
 import { VideoObject } from './VideoObject';
+import { ViewError } from './View';
 
 export interface Element<Properties extends ElementProperties, Options> {
   transition(
@@ -159,7 +161,7 @@ export abstract class BaseElement<
 
     const propertyNames = Object.keys(
       (oldObjectOldProperties ?? newObjectNewProperties)!,
-    ) as (keyof ResolvedProperties)[];
+    ) as (keyof ResolvedProperties & string)[];
     for (const propertyName of propertyNames) {
       const oldObjectChanged =
         oldObjectOldProperties?.[propertyName] !==
@@ -171,6 +173,9 @@ export abstract class BaseElement<
         this.propertyTransitions.get(propertyName)?.forEach(it => it.cancel());
       }
 
+      const transitionEasing = this.getElementTransitionEasing(
+        resolveElementPropertyTransitionEasing(newProperties, propertyName),
+      );
       if (oldObjectChanged) {
         this.transitionPropertyValue(
           oldObject!,
@@ -178,6 +183,7 @@ export abstract class BaseElement<
           oldObjectNewProperties![propertyName],
           0,
           oldObjectTransitionDuration,
+          transitionEasing,
         );
       }
       if (newObjectChanged) {
@@ -187,6 +193,7 @@ export abstract class BaseElement<
           newObjectNewProperties![propertyName],
           newObjectTransitionDelay,
           newObjectTransitionDuration,
+          transitionEasing,
         );
       }
     }
@@ -224,6 +231,17 @@ export abstract class BaseElement<
     return 1;
   }
 
+  private getElementTransitionEasing(name: string): Easing {
+    switch (name) {
+      case 'linear':
+        return LinearEasing;
+      case 'ease':
+        return CssEasings.Ease;
+      default:
+        throw new ViewError(`Unsupported transition easing "${name}"`);
+    }
+  }
+
   protected abstract getPropertyValue(
     object: Object,
     propertyName: keyof ResolvedProperties,
@@ -241,6 +259,7 @@ export abstract class BaseElement<
     propertyValue: ResolvedProperties[typeof propertyName],
     transitionDelay: number,
     transitionDuration: number,
+    transitionEasing: Easing,
   ) {
     // noinspection SuspiciousTypeOfGuard
     if (typeof propertyValue !== 'number') {
@@ -254,6 +273,7 @@ export abstract class BaseElement<
       transitionDuration,
     )
       .setDelay(transitionDelay)
+      .setEasing(transitionEasing)
       .addOnUpdateCallback(it =>
         this.setPropertyValue(object, propertyName, it),
       )

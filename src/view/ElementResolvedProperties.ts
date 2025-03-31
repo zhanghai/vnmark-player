@@ -74,6 +74,62 @@ export function resolveElementTransitionDuration(
   );
 }
 
+export function resolveElementPropertyTransitionEasing(
+  properties: BaseElementProperties,
+  propertyName: string,
+): string {
+  let defaultTransitionEasing = 'ease';
+  switch (properties.type) {
+    case 'background':
+    case 'figure':
+    case 'foreground':
+    case 'avatar':
+      switch (propertyName) {
+        case 'value':
+        case 'alpha':
+          defaultTransitionEasing = 'linear';
+          break;
+      }
+      break;
+    case 'name':
+    case 'text':
+    case 'choice':
+      switch (propertyName) {
+        case 'value':
+          defaultTransitionEasing = 'linear';
+          break;
+      }
+      break;
+    case 'music':
+    case 'sound':
+    case 'voice':
+      switch (propertyName) {
+        case 'value':
+        case 'volume':
+          defaultTransitionEasing = 'linear';
+          break;
+      }
+      break;
+    case 'video':
+      switch (propertyName) {
+        case 'value':
+        case 'alpha':
+        case 'volume':
+          defaultTransitionEasing = 'linear';
+          break;
+      }
+      break;
+    case 'effect':
+    default:
+      throw new ViewError(`Unexpected element type "${properties.type}"`);
+  }
+  return (
+    resolvePropertyValue(properties.transitionEasing, it =>
+      StringValue.resolve(it),
+    ) ?? defaultTransitionEasing
+  );
+}
+
 export interface ImageElementResolvedProperties {
   readonly value: number;
   readonly anchorX: number;

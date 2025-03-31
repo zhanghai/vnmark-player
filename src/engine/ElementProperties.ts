@@ -39,6 +39,7 @@ export interface BaseElementProperties {
   readonly index: number;
   readonly value?: NoneValue | StringValue;
   readonly transitionDuration?: ZeroValue | TimeValue;
+  readonly transitionEasing?: StringValue;
 }
 
 export interface ImageElementProperties extends BaseElementProperties {
@@ -138,6 +139,12 @@ export namespace Property {
           propertyName,
           propertyValue,
           it => ZeroValue.parse(it) ?? TimeValue.parse(it),
+        );
+        break;
+      case 'transition_easing':
+        name = 'transitionEasing';
+        value = parsePropertyValue(propertyName, propertyValue, it =>
+          StringValue.parse(it),
         );
         break;
     }
