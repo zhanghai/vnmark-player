@@ -54,12 +54,12 @@ export class View {
     await this.loadTemplate();
 
     this.layout = new Layout(this.rootElement, this.visualTicker);
-    this.layout.interactionElement.addEventListener('click', event => {
+    this.layout.pointerElement.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
       this.onClick();
     });
-    this.layout.interactionElement.addEventListener('wheel', event => {
+    this.layout.pointerElement.addEventListener('wheel', event => {
       event.preventDefault();
       event.stopPropagation();
       if (event.deltaY > 0) {

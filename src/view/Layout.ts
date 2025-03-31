@@ -17,7 +17,7 @@ export class Layout {
     string,
     Map<ElementType, HTMLElement>
   >;
-  readonly interactionElement: HTMLElement;
+  readonly pointerElement: HTMLElement;
 
   private layoutName = 'none';
 
@@ -60,14 +60,14 @@ export class Layout {
       this.layoutTypeTemplateElements = new Map();
     }
 
-    const interactionElement = HTMLElements.firstDescendantOrUndefined(
+    const pointerElement = HTMLElements.firstDescendantOrUndefined(
       rootElement,
-      it => it.dataset.id === 'interaction',
+      it => it.dataset.id === 'pointer',
     );
-    if (!interactionElement) {
+    if (!pointerElement) {
       throw new ViewError('Missing pointer element');
     }
-    this.interactionElement = interactionElement;
+    this.pointerElement = pointerElement;
   }
 
   private getLayoutTypeElements(
