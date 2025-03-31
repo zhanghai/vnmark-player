@@ -6,6 +6,10 @@ export interface Matcher {
   match(input: string): boolean;
 }
 
+export namespace Matcher {
+  export const Any: Matcher = { match: () => true };
+}
+
 export class ElementPropertyMatcher {
   constructor(private readonly matchers: [Matcher, Matcher][]) {}
 

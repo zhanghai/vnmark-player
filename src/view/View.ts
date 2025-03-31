@@ -5,6 +5,7 @@ import {
   ElementProperties,
   ElementType,
   Engine,
+  Matcher,
   UpdateViewOptions,
 } from '../engine';
 import { HTMLElements, Numbers } from '../util';
@@ -28,6 +29,8 @@ export class ViewError extends Error {
   }
 }
 
+const CONTINUE_DURATION = 1500;
+
 export class View {
   private layout!: Layout;
   private readonly elements = new Map<
@@ -39,11 +42,12 @@ export class View {
   private readonly auralTicker = new Ticker();
 
   private onContinue: (() => void) | undefined;
-  private onSkip: (() => void) | undefined;
+  private onSkipWait: (() => void) | undefined;
   private onChoose: ((script: string) => void) | undefined;
 
   private skippedLastWait: boolean = false;
   private isSkipping: boolean = false;
+  private isContinuing = false;
 
   constructor(
     private readonly rootElement: HTMLElement,
@@ -160,10 +164,10 @@ export class View {
     if (this.onContinue) {
       this.onContinue();
       this.onContinue = undefined;
-    } else if (this.onSkip) {
+    } else if (this.onSkipWait) {
       this.skippedLastWait = true;
-      this.onSkip();
-      this.onSkip = undefined;
+      this.onSkipWait();
+      this.onSkipWait = undefined;
     }
   }
 
@@ -189,7 +193,7 @@ export class View {
     return Promise.race([
       promise,
       new Promise<void>(resolve => {
-        this.onSkip = resolve;
+        this.onSkipWait = resolve;
       }),
     ]);
   }
@@ -363,19 +367,38 @@ export class View {
         const hasChoice = Object.values(elementPropertiesMap).some(
           it => it.type === 'choice' && resolveElementValue(it),
         );
-        if (!hasChoice && this.isSkipping) {
-          return true;
-        }
-        return new Promise<void>(resolve => {
-          if (hasChoice) {
+        if (hasChoice) {
+          return new Promise<void>(resolve => {
             this.onChoose = script => {
               this.engine.evaluateScript(script);
               resolve();
             };
-          } else {
-            this.onContinue = resolve;
+          }).then(() => true);
+        } else {
+          if (this.isSkipping) {
+            return true;
           }
-        }).then(() => true);
+          return new Promise<void>(resolve => {
+            if (this.isContinuing) {
+              const voiceElements =
+                this.typeElementNames
+                  .get('voice')
+                  ?.map(it => this.elements.get(it)!) ?? [];
+              const hasVoiceTransition = voiceElements.some(it =>
+                it.hasTransition(Matcher.Any),
+              );
+              if (hasVoiceTransition) {
+                Promise.all(voiceElements.map(it => it.wait(Matcher.Any))).then(
+                  () => resolve(),
+                );
+              } else {
+                setTimeout(resolve, CONTINUE_DURATION);
+              }
+            } else {
+              this.onContinue = resolve;
+            }
+          }).then(() => true);
+        }
       }
       case 'set_layout': {
         const newLayoutName = options.layoutName;

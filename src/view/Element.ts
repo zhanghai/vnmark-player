@@ -35,6 +35,8 @@ export interface Element<Properties extends ElementProperties, Options> {
     options: Options,
   ): Generator<Promise<void>, void, void>;
 
+  hasTransition(propertyMatcher: Matcher): boolean;
+
   wait(propertyMatcher: Matcher): Promise<void>;
 
   snap(propertyMatcher: Matcher): void;
@@ -292,6 +294,12 @@ export abstract class BaseElement<
     this.propertyTransitions.set(propertyName, transition);
     this.ticker.addCallback(transition, it => transition.update(it));
     transition.start();
+  }
+
+  hasTransition(propertyMatcher: Matcher): boolean {
+    return Array.from(this.propertyTransitions).some(it =>
+      propertyMatcher.match(it[0] as string),
+    );
   }
 
   async wait(propertyMatcher: Matcher): Promise<void> {
@@ -638,11 +646,23 @@ export class AudioElement extends BaseElement<
     object.setPropertyValue(propertyName, propertyValue);
   }
 
+  hasTransition(propertyMatcher: Matcher): boolean {
+    if (super.hasTransition(propertyMatcher)) {
+      return true;
+    }
+
+    const object = this.object;
+    if (propertyMatcher.match('playback') && object) {
+      return object.howl.playing();
+    }
+    return false;
+  }
+
   wait(propertyMatcher: Matcher): Promise<void> {
     const superPromise = super.wait(propertyMatcher);
 
     const object = this.object;
-    if (object && propertyMatcher.match('playback')) {
+    if (propertyMatcher.match('playback') && object) {
       const playbackPromise = object.createPlaybackPromise();
       return Promise.all([superPromise, playbackPromise]).then(() => {});
     } else {
@@ -652,7 +672,7 @@ export class AudioElement extends BaseElement<
 
   snap(propertyMatcher: Matcher) {
     const object = this.object;
-    if (object && propertyMatcher.match('playback')) {
+    if (propertyMatcher.match('playback') && object) {
       if (!object.loop) {
         object.howl.stop();
       }
@@ -732,6 +752,18 @@ export class VideoElement extends BaseElement<
     propertyValue: VideoElementResolvedProperties[typeof propertyName],
   ) {
     object.setPropertyValue(propertyName, propertyValue);
+  }
+
+  hasTransition(propertyMatcher: Matcher): boolean {
+    if (super.hasTransition(propertyMatcher)) {
+      return true;
+    }
+
+    const object = this.object;
+    if (propertyMatcher.match('playback') && object) {
+      return !object.element.paused;
+    }
+    return false;
   }
 
   wait(propertyMatcher: Matcher): Promise<void> {
