@@ -4,6 +4,7 @@ import {
   BaseElementProperties,
   BooleanValue,
   ChoiceElementProperties,
+  EffectElementProperties,
   ImageElementProperties,
   LengthValue,
   NoneValue,
@@ -120,6 +121,12 @@ export function resolveElementPropertyTransitionEasing(
       }
       break;
     case 'effect':
+      switch (propertyName) {
+        case 'value':
+          defaultTransitionEasing = 'linear';
+          break;
+      }
+      break;
     default:
       throw new ViewError(`Unexpected element type "${properties.type}"`);
   }
@@ -410,6 +417,24 @@ export namespace VideoElementResolvedProperties {
       resolvePropertyValue(properties.loop, it => BooleanValue.resolve(it)) ??
       false;
     return { value, alpha, volume, loop };
+  }
+}
+
+export interface EffectElementResolvedProperties {
+  readonly value: number;
+}
+
+export namespace EffectElementResolvedProperties {
+  export interface ResolveOptions {
+    valueChanged: boolean;
+  }
+
+  export function resolve(
+    _properties: EffectElementProperties,
+    options: ResolveOptions,
+  ): EffectElementResolvedProperties {
+    const value = options.valueChanged ? 0 : 1;
+    return { value };
   }
 }
 

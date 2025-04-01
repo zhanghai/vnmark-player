@@ -72,19 +72,27 @@ export namespace HTMLElements {
     }
   }
 
-  export function someChild(
-    elementExclusive: Node,
-    predicate: (element: HTMLElement) => boolean,
-  ): boolean {
-    for (const childNode of elementExclusive.childNodes) {
-      if (!(childNode instanceof HTMLElement)) {
+  export function insertWithOrder(
+    parentElement: HTMLElement,
+    order: number,
+    element: HTMLElement,
+  ) {
+    let insertBeforeElement: HTMLElement | null = null;
+    for (const childElement of parentElement.children) {
+      if (!(childElement instanceof HTMLElement)) {
         continue;
       }
-      if (predicate(childNode)) {
-        return true;
+      const childOrderString = childElement.dataset.order;
+      if (!childOrderString) {
+        continue;
+      }
+      const childOrder = Number.parseInt(childOrderString);
+      if (order < childOrder) {
+        insertBeforeElement = childElement;
       }
     }
-    return false;
+    element.dataset.order = order.toString();
+    parentElement.insertBefore(element, insertBeforeElement);
   }
 
   export function audioDecode(

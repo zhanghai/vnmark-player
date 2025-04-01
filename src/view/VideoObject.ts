@@ -128,10 +128,10 @@ export class VideoObject {
     }
   }
 
-  createPlaybackPromise(): Promise<VideoObject> {
+  createPlaybackPromise(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.element.loop || this.element.ended) {
-        resolve(this);
+        resolve();
         return;
       }
       const abortController = new AbortController();
@@ -140,7 +140,7 @@ export class VideoObject {
         'ended',
         () => {
           abortController.abort();
-          resolve(this);
+          resolve();
         },
         { signal },
       );

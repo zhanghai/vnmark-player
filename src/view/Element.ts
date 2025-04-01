@@ -3,6 +3,7 @@ import { MultiMap } from 'mnemonist';
 import {
   AudioElementProperties,
   ChoiceElementProperties,
+  EffectElementProperties,
   ElementProperties,
   ImageElementProperties,
   Matcher,
@@ -11,11 +12,14 @@ import {
 } from '../engine';
 import { Package } from '../package';
 import { CssEasings, Easing, LinearEasing, Transition } from '../transition';
+import { HTMLElements } from '../util';
 import { AudioObject } from './AudioObject';
 import { ChoiceObject } from './ChoiceObject';
+import { EffectObject } from './EffectObjects';
 import {
   AudioElementResolvedProperties,
   ChoiceElementResolvedProperties,
+  EffectElementResolvedProperties,
   ImageElementResolvedProperties,
   resolveElementPropertyTransitionEasing,
   resolveElementTransitionDuration,
@@ -370,7 +374,7 @@ export class ImageElement extends BaseElement<
     layer.style.inset = '0';
     layer.style.isolation = 'isolate';
     layer.style.overflow = 'hidden';
-    addElementToContainer(container, index, layer);
+    HTMLElements.insertWithOrder(container, index, layer);
     this.layer = layer;
   }
 
@@ -486,7 +490,7 @@ export class TextElement extends BaseElement<
   protected destroyObject(_object: TextObject) {}
 
   protected attachObject(object: TextObject) {
-    addElementToContainer(this.container, this.index, object.element);
+    HTMLElements.insertWithOrder(this.container, this.index, object.element);
   }
 
   protected detachObject(object: TextObject) {
@@ -557,7 +561,7 @@ export class ChoiceElement extends BaseElement<
   protected destroyObject(_object: ChoiceObject) {}
 
   protected attachObject(object: ChoiceObject) {
-    addElementToContainer(this.container, this.index, object.element);
+    HTMLElements.insertWithOrder(this.container, this.index, object.element);
   }
 
   protected detachObject(object: ChoiceObject) {
@@ -729,7 +733,7 @@ export class VideoElement extends BaseElement<
   }
 
   protected attachObject(object: VideoObject) {
-    addElementToContainer(this.container, this.index, object.element);
+    HTMLElements.insertWithOrder(this.container, this.index, object.element);
     // noinspection JSIgnoredPromiseFromCall
     object.element.play();
   }
@@ -790,25 +794,66 @@ export class VideoElement extends BaseElement<
   }
 }
 
-function addElementToContainer(
-  container: HTMLElement,
-  elementIndex: number,
-  element: HTMLElement,
-) {
-  let insertBeforeElement: HTMLElement | null = null;
-  for (const childElement of container.children) {
-    if (!(childElement instanceof HTMLElement)) {
-      continue;
-    }
-    const childIndexString = childElement.dataset.index;
-    if (!childIndexString) {
-      continue;
-    }
-    const childIndex = Number.parseInt(childIndexString);
-    if (elementIndex < childIndex) {
-      insertBeforeElement = childElement;
-    }
+export class EffectElement extends BaseElement<
+  EffectObject,
+  EffectElementProperties,
+  EffectElementResolvedProperties,
+  unknown
+> {
+  constructor(
+    private readonly effectElement: HTMLElement,
+    private readonly effectOverlayElement: HTMLElement,
+    private readonly index: number,
+    ticker: Ticker,
+  ) {
+    super(ticker, false);
   }
-  element.dataset.index = elementIndex.toString();
-  container.insertBefore(element, insertBeforeElement);
+
+  protected resolveProperties(
+    properties: EffectElementProperties,
+    _object: EffectObject,
+    valueChanged: boolean,
+    _options: unknown,
+  ): EffectElementResolvedProperties {
+    return EffectElementResolvedProperties.resolve(properties, {
+      valueChanged,
+    });
+  }
+
+  protected async createObject(
+    _type: string,
+    value: string,
+  ): Promise<EffectObject> {
+    return EffectObject.create(
+      value,
+      this.effectElement,
+      this.effectOverlayElement,
+      this.index,
+    );
+  }
+
+  protected destroyObject(_object: EffectObject) {}
+
+  protected attachObject(object: EffectObject) {
+    object.attach();
+  }
+
+  protected detachObject(object: EffectObject) {
+    object.detach();
+  }
+
+  protected getPropertyValue(
+    object: EffectObject,
+    propertyName: keyof EffectElementResolvedProperties,
+  ): EffectElementResolvedProperties[typeof propertyName] {
+    return object.getPropertyValue(propertyName);
+  }
+
+  protected setPropertyValue(
+    object: EffectObject,
+    propertyName: keyof EffectElementResolvedProperties,
+    propertyValue: EffectElementResolvedProperties[typeof propertyName],
+  ) {
+    object.setPropertyValue(propertyName, propertyValue);
+  }
 }

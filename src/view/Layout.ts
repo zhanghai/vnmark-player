@@ -17,6 +17,8 @@ export class Layout {
     string,
     Map<ElementType, HTMLElement>
   >;
+  readonly effectElement: HTMLElement;
+  readonly effectOverlayElement: HTMLElement;
   readonly pointerElement: HTMLElement;
 
   private layoutName = 'none';
@@ -60,14 +62,12 @@ export class Layout {
       this.layoutTypeTemplateElements = new Map();
     }
 
-    const pointerElement = HTMLElements.firstDescendantOrUndefined(
+    this.effectElement = this.requireElementById(rootElement, 'effect');
+    this.effectOverlayElement = this.requireElementById(
       rootElement,
-      it => it.dataset.id === 'pointer',
+      'effect-overlay',
     );
-    if (!pointerElement) {
-      throw new ViewError('Missing pointer element');
-    }
-    this.pointerElement = pointerElement;
+    this.pointerElement = this.requireElementById(rootElement, 'pointer');
   }
 
   private getLayoutTypeElements(
@@ -111,6 +111,20 @@ export class Layout {
       return false;
     });
     return layoutTypeElements;
+  }
+
+  private requireElementById(
+    rootElement: HTMLElement,
+    id: string,
+  ): HTMLElement {
+    const element = HTMLElements.firstDescendantOrUndefined(
+      rootElement,
+      it => it.dataset.id === id,
+    );
+    if (!element) {
+      throw new ViewError(`Missing element with ID "${id}"`);
+    }
+    return element;
   }
 
   getContainerElement(

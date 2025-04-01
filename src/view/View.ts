@@ -13,6 +13,7 @@ import {
   AudioElement,
   AvatarElementTransitionOptions,
   ChoiceElement,
+  EffectElement,
   Element,
   FigureElementTransitionOptions,
   ImageElement,
@@ -301,7 +302,12 @@ export class View {
             }
             break;
           case 'effect':
-            // TODO
+            element = new EffectElement(
+              this.layout.effectElement,
+              this.layout.effectOverlayElement,
+              elementProperties.index,
+              this.visualTicker,
+            );
             break;
         }
         if (element) {
