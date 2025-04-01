@@ -1,4 +1,4 @@
-import { ELEMENT_TYPE_STRINGS, ELEMENT_TYPES, ElementType } from '../engine';
+import { ELEMENT_TYPES, ElementType } from '../engine';
 import { Transition } from '../transition';
 import { Arrays2, HTMLElements, Maps } from '../util';
 import { Ticker } from './Ticker';
@@ -83,7 +83,7 @@ export class Layout {
       if (!elementType) {
         return true;
       }
-      if (!ELEMENT_TYPE_STRINGS.includes(elementType)) {
+      if (!ELEMENT_TYPES.includes(elementType)) {
         throw new ViewError(`Unknown element type "${elementType}"`);
       }
       const layoutNames =
@@ -162,14 +162,14 @@ export class Layout {
       }
     }
 
-    const exitElementTypes = new Set(ELEMENT_TYPES);
+    const exitElementTypes = new Set<ElementType>();
     const oldTypeElements = this.layoutTypeContainerElements.get(oldLayoutName);
     const newTypeElements = this.layoutTypeContainerElements.get(newLayoutName);
-    if (oldTypeElements && newTypeElements) {
+    if (oldTypeElements) {
       for (const [elementType, oldElement] of oldTypeElements) {
-        const newElement = newTypeElements.get(elementType);
-        if (oldElement === newElement) {
-          exitElementTypes.delete(elementType);
+        const newElement = newTypeElements?.get(elementType);
+        if (oldElement !== newElement) {
+          exitElementTypes.add(elementType);
         }
       }
     }

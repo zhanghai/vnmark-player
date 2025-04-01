@@ -28,9 +28,7 @@ const CONST_ELEMENT_TYPES = [
   'effect',
 ] as const;
 
-export const ELEMENT_TYPES = CONST_ELEMENT_TYPES as unknown as ElementType[];
-
-export const ELEMENT_TYPE_STRINGS = ELEMENT_TYPES as string[];
+export const ELEMENT_TYPES = CONST_ELEMENT_TYPES as unknown as string[];
 
 export type ElementType = (typeof CONST_ELEMENT_TYPES)[number];
 
@@ -115,7 +113,7 @@ export namespace Property {
       throw new EngineError(`Unsupported element name "${elementName}"`);
     }
     const [, typeString, indexString] = elementNameMatch;
-    if (!ELEMENT_TYPE_STRINGS.includes(typeString)) {
+    if (!ELEMENT_TYPES.includes(typeString)) {
       throw new EngineError(
         `Unsupported element type "${typeString}" from "${elementName}"`,
       );
