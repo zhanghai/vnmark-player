@@ -1,4 +1,5 @@
 import { produce, WritableDraft } from 'immer';
+import escapeRegExp from 'lodash.escaperegexp';
 import {
   QuickJSWASMModule,
   Scope,
@@ -6,13 +7,12 @@ import {
 } from 'quickjs-emscripten';
 import * as VnmarkParser from 'vnmark-parser';
 import {
-  BatchedElementsLine,
   CommandLine,
   Document as ParserDocument,
   ElementLine,
   Line,
   LiteralValue,
-  Name,
+  MacroLine,
   NodeType,
   QuotedValue,
   ScriptValue,
@@ -33,7 +33,7 @@ export class EngineError extends Error {
 const METADATA_DEFAULTS = {
   width: 1280,
   height: 720,
-  batched_elements: ['name', 'avatar', 'text', 'voice'],
+  macro_line: ['name: $1', 'avatar: $2', 'text: $3', 'voice: $4'],
   blank_line: [
     ': wait background*, figure*, foreground*, avatar*, name*, text*, choice*, voice*',
     ': snap background*, figure*, foreground*, avatar*, name*, text*, choice*, voice*',
@@ -44,53 +44,96 @@ const METADATA_DEFAULTS = {
 export class Document {
   private constructor(
     readonly document: ParserDocument,
-    readonly lines: Line[],
-    readonly batchedElementNames: Name[],
-    readonly blankLineLines: Line[],
+    readonly commandLines: CommandLine[],
     readonly labelIndices: Map<string, number>,
   ) {}
 
   static parse(source: string): Document {
     const document = VnmarkParser.parse(source, { grammarSource: source });
 
-    const lines = document.body?.lines ?? [];
+    let lines =
+      document.body?.lines.filter(it => it.type !== NodeType.CommentLine) ?? [];
 
     const metadata = { ...document.frontMatter.metadata, METADATA_DEFAULTS };
-    const batchedElements =
-      (metadata['batched_elements'] as string[] | undefined) ?? [];
-    const batchedElementNames: Name[] = batchedElements.map(it => ({
-      type: NodeType.Name,
-      location: {
-        source: it,
-        start: { offset: 0, line: 1, column: 1 },
-        end: { offset: it.length, line: 1, column: it.length + 1 },
-      },
-      value: it,
-    }));
+    const macroLine = (metadata['macro_line'] as string[] | undefined) ?? [];
+    lines = lines.flatMap(line => {
+      if (line.type === NodeType.MacroLine) {
+        const arguments_ = (line as MacroLine).arguments;
+        if (arguments_.length <= 1) {
+          throw new EngineError(
+            `Unexpected marco line argument list size ${arguments_.length}`,
+          );
+        }
+        const argumentsString = arguments_.join('');
+        const argumentsPattern = new RegExp(
+          `(${arguments_.map(escapeRegExp).join(')(')})`,
+        );
+        return macroLine.map(it => {
+          const lineSource = argumentsString.replace(argumentsPattern, it);
+          return VnmarkParser.parse(lineSource, {
+            grammarSource: lineSource,
+            startRule: 'Line',
+          });
+        });
+      } else {
+        return line;
+      }
+    });
 
     const blankLine = (metadata['blank_line'] as string[] | undefined) ?? [];
     const blankLineLines = blankLine.map(it =>
       VnmarkParser.parse(it, { grammarSource: it, startRule: 'Line' }),
     );
+    lines = lines.flatMap(line => {
+      if (line.type === NodeType.BlankLine) {
+        return blankLineLines;
+      } else {
+        return line;
+      }
+    });
+
+    lines = lines.flatMap(line => {
+      if (line.type === NodeType.ElementLine) {
+        return (line as ElementLine).properties.map(property => {
+          const commandName: LiteralValue = {
+            type: NodeType.LiteralValue,
+            location: line.location,
+            value: 'set_property',
+          };
+          const elementName = (line as ElementLine).name;
+          const propertyName = property.name ?? {
+            type: NodeType.LiteralValue,
+            location: line.location,
+            value: 'value',
+          };
+          return {
+            type: NodeType.CommandLine,
+            location: line.location,
+            comment: null,
+            name: commandName,
+            arguments: [elementName, propertyName, property.value],
+          } satisfies CommandLine;
+        });
+      } else {
+        return line;
+      }
+    });
+    const commandLines = lines as CommandLine[];
 
     const labelIndices = new Map<string, number>();
-    for (const [index, line] of document.body?.lines.entries() ?? []) {
+    for (const [index, line] of commandLines.entries()) {
       if (line.type == 'CommandLine') {
         const commandLine = line as CommandLine;
-        if (commandLine.name.value === 'label') {
+        const commandName = this.getValue(commandLine.name);
+        if (commandName === 'label') {
           const arguments_ = commandLine.arguments.map(it => {
-            switch (it.type) {
-              case NodeType.LiteralValue:
-                return (it as LiteralValue).value;
-              case NodeType.QuotedValue:
-                return (it as QuotedValue).value;
-              case NodeType.ScriptValue:
-                throw new EngineError(
-                  `Unsupported script value in label command "${getLineSource(line)}"`,
-                );
-              default:
-                throw new EngineError(`Unexpected value type "${it.type}"`);
+            const argument = this.getValue(it);
+            if (argument === undefined) {
+              throw new EngineError(
+                `Unsupported script value in label command "${getLineSource(line)}"`,
+              );
             }
+            return argument;
           });
           if (arguments_.length !== 1) {
             throw new EngineError(
@@ -103,19 +146,26 @@ export class Document {
       }
     }
 
-    return new Document(
-      document,
-      lines,
-      batchedElementNames,
-      blankLineLines,
-      labelIndices,
-    );
+    return new Document(document, commandLines, labelIndices);
+  }
+
+  private static getValue(value: Value): string | undefined {
+    switch (value.type) {
+      case NodeType.LiteralValue:
+        return (value as LiteralValue).value;
+      case NodeType.QuotedValue:
+        return (value as QuotedValue).value;
+      case NodeType.ScriptValue:
+        return undefined;
+      default:
+        throw new EngineError(`Unexpected value type "${value.type}"`);
+    }
   }
 }
 
 export interface State {
   readonly fileName: string;
-  readonly nextLineIndex: number;
+  readonly nextCommandIndex: number;
   readonly layoutName: string;
   readonly elements: Readonly<Record<string, ElementProperties>>;
   readonly scriptStates: Record<string, unknown>;
@@ -155,7 +205,7 @@ export class Engine {
     const fileName = state?.fileName ?? this.package_.manifest.entrypoint;
     this._state = {
       fileName,
-      nextLineIndex: 0,
+      nextCommandIndex: 0,
       layoutName: 'none',
       elements: {},
       scriptStates: {},
@@ -167,24 +217,24 @@ export class Engine {
       this._state = { ...this._state, ...state };
 
       while (true) {
-        const lines = this._document.lines;
-        const lineIndex = this._state.nextLineIndex;
-        if (lineIndex >= lines.length) {
+        const commandLines = this._document.commandLines;
+        const commandIndex = this._state.nextCommandIndex;
+        if (commandIndex >= commandLines.length) {
           break;
         }
-        const line = lines[lineIndex];
-        let moveToNextLine: boolean;
+        const command = commandLines[commandIndex];
+        let moveToNextCommand: boolean;
         try {
-          moveToNextLine = await this.executeLine(line);
+          moveToNextCommand = await this.executeCommand(command);
         } catch (e) {
           throw new EngineError(
-            `Error when executing line "${getLineSource(line)}"`,
+            `Error when executing line "${getLineSource(command)}"`,
             { cause: e },
           );
         }
-        if (moveToNextLine) {
+        if (moveToNextCommand) {
           this.updateState(it => {
-            it.nextLineIndex = lineIndex + 1;
+            it.nextCommandIndex = commandIndex + 1;
           });
         }
       }
@@ -196,100 +246,20 @@ export class Engine {
     }
   }
 
-  private async executeLine(line: Line): Promise<boolean> {
-    switch (line.type) {
-      case NodeType.CommentLine:
-        return true;
-      case NodeType.BlankLine:
-        return await this.executeBlankLine();
-      case NodeType.ElementLine:
-        return await this.executeElementLine(line as ElementLine);
-      case NodeType.BatchedElementsLine:
-        return await this.executeBatchedElementsLine(
-          line as BatchedElementsLine,
-        );
-      case NodeType.CommandLine:
-        return await this.executeCommandLine(line as CommandLine);
-      default:
-        throw new EngineError(`Unexpected line type "${line.type}"`);
-    }
-  }
-
-  private async executeBlankLine(): Promise<boolean> {
-    for (const commandLine of this._document.blankLineLines) {
-      if (!(await this.executeLine(commandLine))) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private async executeElementLine(line: ElementLine): Promise<boolean> {
-    for (const property of line.properties) {
-      const commandName: Name = {
-        type: NodeType.Name,
-        location: line.location,
-        value: 'set_property',
-      };
-      const elementName: LiteralValue = {
-        type: NodeType.LiteralValue,
-        location: line.location,
-        value: line.name.value,
-      };
-      const propertyName: LiteralValue = {
-        type: NodeType.LiteralValue,
-        location: line.location,
-        value: property.name?.value ?? 'value',
-      };
-      const commandLine: CommandLine = {
-        type: NodeType.CommandLine,
-        location: line.location,
-        comment: null,
-        name: commandName,
-        arguments: [elementName, propertyName, property.value],
-      };
-      if (!(await this.executeCommandLine(commandLine))) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private async executeBatchedElementsLine(
-    line: BatchedElementsLine,
-  ): Promise<boolean> {
-    const batchedElementNames = this._document.batchedElementNames;
-    if (line.batchedProperties.length !== batchedElementNames.length) {
-      throw new EngineError(
-        `Invalid number of elements for batched elements line, expected` +
-          ` "${batchedElementNames.map(it => it.value).join(', ')}"`,
-      );
-    }
-    for (const [index, properties] of line.batchedProperties.entries()) {
-      const elementLine: ElementLine = {
-        type: NodeType.ElementLine,
-        location: line.location,
-        comment: null,
-        name: batchedElementNames[index],
-        properties,
-      };
-      if (!(await this.executeElementLine(elementLine))) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private async executeCommandLine(line: CommandLine): Promise<boolean> {
-    const commandName = line.name.value;
+  private async executeCommand(commandLine: CommandLine): Promise<boolean> {
+    const commandName = this.getValue(commandLine.name);
     const command = COMMANDS.get(commandName);
     if (!command) {
       throw new EngineError(`Unsupported command "${commandName}"`);
     }
-    const arguments_ = line.arguments.map(it => this.getValue(it));
-    if (arguments_.length !== command.argumentCount) {
+    const arguments_ = commandLine.arguments.map(it => this.getValue(it));
+    if (
+      command.argumentCount instanceof Function
+        ? !command.argumentCount(arguments_.length)
+        : arguments_.length !== command.argumentCount
+    ) {
       throw new EngineError(
-        `Invalid number of arguments, expected ${command.argumentCount}`,
+        `Invalid number of arguments ${arguments_.length}, expected ${command.argumentCount}`,
       );
     }
     return await command.execute(this, arguments_);
@@ -351,7 +321,7 @@ export class Engine {
     this._document = Document.parse(source);
     this.updateState(it => {
       it.fileName = name;
-      it.nextLineIndex = 0;
+      it.nextCommandIndex = 0;
     });
   }
 

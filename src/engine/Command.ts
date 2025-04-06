@@ -1,3 +1,5 @@
+import { Minimatch, minimatch } from 'minimatch';
+
 import { Numbers } from '../util';
 import { Property } from './ElementProperties';
 import { ElementPropertyMatcher } from './ElementPropertyMatcher';
@@ -5,7 +7,7 @@ import { Engine, EngineError } from './Engine';
 
 export interface Command {
   name: string;
-  argumentCount: number;
+  argumentCount: number | ((argumentCount: number) => boolean);
 
   execute(engine: Engine, arguments_: string[]): Promise<boolean>;
 }
@@ -49,7 +51,7 @@ const COMMAND_ARRAY: Command[] = [
     argumentCount: 0,
     async execute(engine): Promise<boolean> {
       engine.updateState(it => {
-        it.nextLineIndex = engine.document.lines.length;
+        it.nextCommandIndex = engine.document.commandLines.length;
       });
       return false;
     },
@@ -64,7 +66,7 @@ const COMMAND_ARRAY: Command[] = [
         throw new EngineError(`Unknown label "${labelName}"`);
       }
       engine.updateState(it => {
-        it.nextLineIndex = labelIndex;
+        it.nextCommandIndex = labelIndex;
       });
       return false;
     },
@@ -81,7 +83,7 @@ const COMMAND_ARRAY: Command[] = [
       const conditionValue = engine.evaluateScript(condition);
       if (conditionValue) {
         engine.updateState(it => {
-          it.nextLineIndex = labelIndex;
+          it.nextCommandIndex = labelIndex;
         });
         return false;
       } else {
@@ -116,35 +118,46 @@ const COMMAND_ARRAY: Command[] = [
     argumentCount: 3,
     async execute(engine, arguments_) {
       const [elementName, propertyName, propertyValue] = arguments_;
-      validateName(elementName);
-      validateName(propertyName);
-      const { type, index, name, value } = Property.parse(
-        elementName,
-        propertyName,
-        propertyValue,
-      );
-      const canonicalElementName = `${type}${index}`;
+      const elementNameMinimatch = new Minimatch(elementName);
+      let elementNames: string[];
+      if (elementNameMinimatch.hasMagic()) {
+        elementNames = Object.keys(engine.state.elements).filter(it =>
+          elementNameMinimatch.match(it),
+        );
+      } else {
+        elementNames = elementNameMinimatch.set.map(it =>
+          minimatch.unescape(it.join('/')),
+        );
+      }
       engine.updateState(it => {
-        const element = it.elements[canonicalElementName];
-        if (value.type === 'initial') {
-          // @ts-expect-error TS7053
-          if (element && element[name]) {
+        for (const elementName of elementNames) {
+          const { type, index, name, value } = Property.parse(
+            elementName,
+            propertyName,
+            propertyValue,
+          );
+          const canonicalElementName = `${type}${index}`;
+          const element = it.elements[canonicalElementName];
+          if (value.type === 'initial') {
             // @ts-expect-error TS7053
-            delete element[name];
-            if (Object.keys(element).length === 2) {
-              delete it.elements[canonicalElementName];
+            if (element && element[name]) {
+              // @ts-expect-error TS7053
+              delete element[name];
+              if (Object.keys(element).length === 2) {
+                delete it.elements[canonicalElementName];
+              }
             }
-          }
-        } else {
-          if (element) {
-            // @ts-expect-error TS7053
-            element[name] = value;
           } else {
-            it.elements[canonicalElementName] = {
-              type,
-              index,
-              [name]: value,
-            };
+            if (element) {
+              // @ts-expect-error TS7053
+              element[name] = value;
+            } else {
+              it.elements[canonicalElementName] = {
+                type,
+                index,
+                [name]: value,
+              };
+            }
           }
         }
       });
@@ -164,14 +177,9 @@ const COMMAND_ARRAY: Command[] = [
   },
   {
     name: 'snap',
-    argumentCount: 1,
+    argumentCount: it => it > 0,
     async execute(engine, arguments_) {
-      const [elementPropertyNames] = arguments_;
-      if (!elementPropertyNames) {
-        throw new EngineError(`Empty element properties to snap`);
-      }
-      const elementPropertyMatcher =
-        ElementPropertyMatcher.parse(elementPropertyNames);
+      const elementPropertyMatcher = ElementPropertyMatcher.parse(arguments_);
       return await engine.updateView({
         type: 'snap',
         elementPropertyMatcher,
@@ -180,14 +188,9 @@ const COMMAND_ARRAY: Command[] = [
   },
   {
     name: 'wait',
-    argumentCount: 1,
+    argumentCount: it => it > 0,
     async execute(engine, arguments_) {
-      const [elementPropertyNames] = arguments_;
-      if (!elementPropertyNames) {
-        throw new EngineError(`Empty element properties to snap`);
-      }
-      const elementPropertyMatcher =
-        ElementPropertyMatcher.parse(elementPropertyNames);
+      const elementPropertyMatcher = ElementPropertyMatcher.parse(arguments_);
       return await engine.updateView({
         type: 'wait',
         elementPropertyMatcher,
@@ -195,12 +198,6 @@ const COMMAND_ARRAY: Command[] = [
     },
   },
 ];
-
-function validateName(name: string) {
-  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-    throw new EngineError(`Invalid name "${name}"`);
-  }
-}
 
 export const COMMANDS: Map<string, Command> = new Map(
   COMMAND_ARRAY.map(it => [it.name, it]),

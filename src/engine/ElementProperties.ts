@@ -106,9 +106,7 @@ export namespace Property {
     propertyName: string,
     propertyValue: string,
   ): Property {
-    const elementNameMatch = elementName.match(
-      /^([A-Za-z_](?:[A-Za-z0-9_]*[A-Za-z_])?)([1-9][0-9]*)?$/,
-    );
+    const elementNameMatch = elementName.match(/^(.*[^0-9])([1-9][0-9]*)?$/);
     if (!elementNameMatch) {
       throw new EngineError(`Unsupported element name "${elementName}"`);
     }

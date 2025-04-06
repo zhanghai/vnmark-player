@@ -29,9 +29,9 @@ export class ElementPropertyMatcher {
 }
 
 export namespace ElementPropertyMatcher {
-  export function parse(input: string): ElementPropertyMatcher {
+  export function parse(input: string[]): ElementPropertyMatcher {
     const matchers: [Matcher, Matcher][] = [];
-    for (const elementPropertyName of input.split(/\s*,\s*/)) {
+    for (const elementPropertyName of input) {
       const elementAndPropertyNames = elementPropertyName.split(/\s*\.\s*/);
       if (elementAndPropertyNames.length > 2) {
         throw new EngineError(
