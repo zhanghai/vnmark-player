@@ -221,7 +221,7 @@ export class Layout {
   }
 
   snap() {
-    for (const transition of this.transitions) {
+    for (const transition of Array.from(this.transitions)) {
       transition.cancel();
     }
   }

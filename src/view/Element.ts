@@ -176,7 +176,10 @@ export abstract class BaseElement<
         newObjectOldProperties?.[propertyName] !==
         newObjectNewProperties?.[propertyName];
       if (oldObjectChanged || newObjectChanged) {
-        this.propertyTransitions.get(propertyName)?.forEach(it => it.cancel());
+        const transitions = this.propertyTransitions.get(propertyName);
+        if (transitions) {
+          Array.from(transitions).forEach(it => it.cancel());
+        }
       }
 
       const transitionEasing = this.getElementTransitionEasing(
@@ -288,7 +291,10 @@ export abstract class BaseElement<
         this.propertyTransitions.remove(propertyName, transition);
         this.ticker.removeCallback(transition);
         if (propertyName === 'value' && propertyValue === 0) {
-          this.objectTransitions.get(object)?.forEach(it => it.cancel());
+          const transitions = this.objectTransitions.get(object);
+          if (transitions) {
+            Array.from(transitions).forEach(it => it.cancel());
+          }
           this.detachObject(object);
           this.destroyObject(object);
           // TODO: Remove this element if there's no object?
