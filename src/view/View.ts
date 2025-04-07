@@ -33,6 +33,8 @@ export class ViewError extends Error {
 const CONTINUE_DURATION = 1500;
 
 export class View {
+  private readonly scriptElements: HTMLElement[] = [];
+
   private layout!: Layout;
   private readonly elements = new Map<
     string,
@@ -154,6 +156,9 @@ export class View {
             }),
           );
         }
+      }
+      if (element.dataset.scriptAnimate || element.dataset.scriptStyle) {
+        this.scriptElements.push(element);
       }
       return true;
     });
@@ -367,6 +372,21 @@ export class View {
         );
       }
     });
+
+    for (const element of this.scriptElements) {
+      const scriptAnimate = element.dataset.scriptAnimate;
+      if (scriptAnimate) {
+        const animateArguments = this.engine.evaluateScript(scriptAnimate);
+        if (animateArguments) {
+          // @ts-expect-error TS2556
+          element.animate(...animateArguments);
+        }
+      }
+      const scriptStyle = element.dataset.scriptStyle;
+      if (scriptStyle) {
+        element.style.cssText = this.engine.evaluateScript(scriptStyle);
+      }
+    }
 
     switch (options.type) {
       case 'pause': {

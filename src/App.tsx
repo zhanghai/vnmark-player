@@ -40,7 +40,7 @@ function App() {
         <button
           onClick={async event => {
             event.preventDefault();
-            // @ts-expect-error TS-2339
+            // @ts-expect-error TS2339
             await loadVnmDirectory(await window.showDirectoryPicker());
           }}>
           Open directory
