@@ -173,15 +173,12 @@ export namespace LengthValue {
     return { type: 'length', value, unit: 'px' };
   }
 
-  export function resolve(
-    value: PropertyValue,
-    density: number,
-  ): number | undefined {
+  export function resolve(value: PropertyValue): number | undefined {
     if (value.type === 'length') {
       const length = value as LengthValue;
       switch (length.unit) {
         case 'px':
-          return length.value * density;
+          return length.value;
       }
     }
     return undefined;

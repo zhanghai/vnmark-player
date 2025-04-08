@@ -69,7 +69,7 @@ export class ImageObject {
   }
 
   private updateLeft() {
-    this.element.style.left = `${this._positionX / this.density}px`;
+    this.element.style.left = `${this._positionX}px`;
   }
 
   get positionY(): number {
@@ -82,7 +82,7 @@ export class ImageObject {
   }
 
   private updateTop() {
-    this.element.style.top = `${this._positionY / this.density}px`;
+    this.element.style.top = `${this._positionY}px`;
   }
 
   get offsetX(): number {

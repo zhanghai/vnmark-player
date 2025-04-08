@@ -11,6 +11,9 @@ export class VideoObject {
 
   constructor() {
     this.element = document.createElement('video');
+    this.element.style.position = 'absolute';
+    this.element.style.width = '100%';
+    this.element.style.height = '100%';
     this.element.style.objectFit = 'contain';
   }
 

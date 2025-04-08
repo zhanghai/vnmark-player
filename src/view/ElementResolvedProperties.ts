@@ -158,7 +158,6 @@ export interface ImageElementResolvedProperties {
 export namespace ImageElementResolvedProperties {
   export interface ResolveOptions {
     valueChanged: boolean;
-    density: number;
     screenWidth: number;
     screenHeight: number;
     imageWidth: number;
@@ -179,7 +178,7 @@ export namespace ImageElementResolvedProperties {
         properties.anchorX,
         it =>
           ZeroValue.resolve(it) ??
-          LengthValue.resolve(it, options.density) ??
+          LengthValue.resolve(it) ??
           PercentageValue.resolve(it, options.imageWidth),
       ) ?? (properties.type === 'figure' ? options.imageWidth / 2 : 0);
     const anchorY =
@@ -187,7 +186,7 @@ export namespace ImageElementResolvedProperties {
         properties.anchorY,
         it =>
           ZeroValue.resolve(it) ??
-          LengthValue.resolve(it, options.density) ??
+          LengthValue.resolve(it) ??
           PercentageValue.resolve(it, options.imageHeight),
       ) ?? (properties.type === 'figure' ? options.imageHeight : 0);
     let defaultPositionX;
@@ -212,7 +211,7 @@ export namespace ImageElementResolvedProperties {
         properties.positionX,
         it =>
           ZeroValue.resolve(it) ??
-          LengthValue.resolve(it, options.density) ??
+          LengthValue.resolve(it) ??
           PercentageValue.resolve(it, options.screenWidth),
       ) ?? defaultPositionX;
     const positionY =
@@ -220,7 +219,7 @@ export namespace ImageElementResolvedProperties {
         properties.positionY,
         it =>
           ZeroValue.resolve(it) ??
-          LengthValue.resolve(it, options.density) ??
+          LengthValue.resolve(it) ??
           PercentageValue.resolve(it, options.screenHeight),
       ) ?? defaultPositionY;
     const offsetX =
@@ -228,7 +227,7 @@ export namespace ImageElementResolvedProperties {
         properties.offsetX,
         it =>
           ZeroValue.resolve(it) ??
-          LengthValue.resolve(it, options.density) ??
+          LengthValue.resolve(it) ??
           PercentageValue.resolve(it, options.screenWidth),
       ) ?? (properties.type === 'figure' ? options.screenWidth : 0);
     const offsetY =
@@ -236,7 +235,7 @@ export namespace ImageElementResolvedProperties {
         properties.offsetY,
         it =>
           ZeroValue.resolve(it) ??
-          LengthValue.resolve(it, options.density) ??
+          LengthValue.resolve(it) ??
           PercentageValue.resolve(it, options.screenHeight),
       ) ?? (properties.type === 'figure' ? options.screenHeight : 0);
     const pivotX =
@@ -244,7 +243,7 @@ export namespace ImageElementResolvedProperties {
         properties.pivotX,
         it =>
           ZeroValue.resolve(it) ??
-          LengthValue.resolve(it, options.density) ??
+          LengthValue.resolve(it) ??
           PercentageValue.resolve(it, options.imageWidth),
       ) ?? options.imageWidth / 2;
     const pivotY =
@@ -252,7 +251,7 @@ export namespace ImageElementResolvedProperties {
         properties.pivotY,
         it =>
           ZeroValue.resolve(it) ??
-          LengthValue.resolve(it, options.density) ??
+          LengthValue.resolve(it) ??
           PercentageValue.resolve(it, options.imageHeight),
       ) ?? options.imageHeight / 2;
     const scaleX =

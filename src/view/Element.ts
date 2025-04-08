@@ -393,11 +393,10 @@ export class ImageElement extends BaseElement<
     const manifest = this.package_.manifest;
     return ImageElementResolvedProperties.resolve(properties, {
       valueChanged,
-      density: manifest.density,
       screenWidth: manifest.width,
       screenHeight: manifest.height,
-      imageWidth: object.element.naturalWidth,
-      imageHeight: object.element.naturalHeight,
+      imageWidth: object.element.naturalWidth / manifest.density,
+      imageHeight: object.element.naturalHeight / manifest.density,
       figureIndex: (options as FigureElementTransitionOptions)?.figureIndex,
       figureCount: (options as FigureElementTransitionOptions)?.figureCount,
       avatarPositionX: (options as AvatarElementTransitionOptions)
