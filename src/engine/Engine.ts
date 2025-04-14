@@ -31,8 +31,6 @@ export class EngineError extends Error {
 }
 
 const METADATA_DEFAULTS = {
-  width: 1280,
-  height: 720,
   macro_line: ['name: $1', 'avatar: $2', 'text: $3', 'voice: $4'],
   blank_line: [
     ': wait background*, figure*, foreground*, avatar*, name*, text*, choice*, voice*',
@@ -163,7 +161,13 @@ export class Document {
   }
 }
 
-export interface State {
+export type EngineStatus =
+  | { type: 'ready' }
+  | { type: 'executing' }
+  | { type: 'loading'; promise: Promise<void> }
+  | { type: 'updating' };
+
+export interface EngineState {
   readonly fileName: string;
   readonly nextCommandIndex: number;
   readonly layoutName: string;
@@ -182,11 +186,17 @@ export type UpdateViewOptions =
   | { type: 'wait'; elementPropertyMatcher: ElementPropertyMatcher };
 
 export class Engine {
-  public viewUpdater: ViewUpdater | undefined;
+  public onUpdateView: ViewUpdater | undefined;
 
-  private _state!: State;
+  private _status: EngineStatus = { type: 'ready' };
 
-  get state(): State {
+  get status(): EngineStatus {
+    return this._status;
+  }
+
+  private _state!: EngineState;
+
+  get state(): EngineState {
     return this._state;
   }
 
@@ -201,20 +211,19 @@ export class Engine {
     private readonly quickJs: QuickJSWASMModule,
   ) {}
 
-  async execute(state?: Partial<State>) {
-    const fileName = state?.fileName ?? this.package_.manifest.entrypoint;
-    this._state = {
-      fileName,
-      nextCommandIndex: 0,
-      layoutName: 'none',
-      elements: {},
-      scriptStates: {},
-      keepSkippingWait: false,
-    };
-
+  async execute(state?: Partial<EngineState>) {
     try {
-      await this.setDocument(fileName);
-      this._state = { ...this._state, ...state };
+      this._status = { type: 'executing' };
+      this._state = {
+        fileName: this.package_.manifest.entrypoint,
+        nextCommandIndex: 0,
+        layoutName: 'none',
+        elements: {},
+        scriptStates: {},
+        keepSkippingWait: false,
+        ...state,
+      };
+      await this.loadWithStatus(this.loadDocument(this._state.fileName));
 
       while (true) {
         const commandLines = this._document.commandLines;
@@ -243,6 +252,7 @@ export class Engine {
       this._state = undefined;
       // @ts-expect-error TS2322
       this._document = undefined;
+      this._status = { type: 'ready' };
     }
   }
 
@@ -316,13 +326,27 @@ export class Engine {
   }
 
   async setDocument(name: string) {
-    const blob = await this.package_.getBlob('vnmark', name);
-    const source = await blob.text();
-    this._document = Document.parse(source);
+    await this.loadWithStatus(this.loadDocument(name));
     this.updateState(it => {
       it.fileName = name;
       it.nextCommandIndex = 0;
     });
+  }
+
+  private async loadDocument(name: string) {
+    const blob = await this.package_.getBlob('vnmark', name);
+    const source = await blob.text();
+    this._document = Document.parse(source);
+  }
+
+  private async loadWithStatus<T>(promise: Promise<T>): Promise<T> {
+    const savedStatus = this._status;
+    this._status = { type: 'loading', promise: promise.then(() => {}) };
+    try {
+      return await promise;
+    } finally {
+      this._status = savedStatus;
+    }
   }
 
   setLayout(layoutName: string) {
@@ -337,14 +361,16 @@ export class Engine {
     });
   }
 
-  updateState(recipe: (draft: WritableDraft<State>) => void) {
+  updateState(recipe: (draft: WritableDraft<EngineState>) => void) {
     this._state = produce(this._state, it => {
       recipe(it);
     });
   }
 
   async updateView(options: UpdateViewOptions): Promise<boolean> {
-    const moveToNextLine = (await this.viewUpdater?.(options)) ?? true;
+    const moveToNextLine = this.onUpdateView
+      ? await this.updateWithStatus(this.onUpdateView(options))
+      : true;
     // Elements with value set to 'none' should be reset, i.e. removed. But we should only do this
     // after updating view so that transition properties can still apply to a change to 'none'.
     this.updateState(it => {
@@ -356,6 +382,16 @@ export class Engine {
       it.keepSkippingWait = false;
     });
     return moveToNextLine;
+  }
+
+  private async updateWithStatus<T>(promise: Promise<T>): Promise<T> {
+    const savedStatus = this._status;
+    this._status = { type: 'updating' };
+    try {
+      return await promise;
+    } finally {
+      this._status = savedStatus;
+    }
   }
 }
 

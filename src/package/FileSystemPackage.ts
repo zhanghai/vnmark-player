@@ -7,7 +7,6 @@ export class FileSystemPackage extends Package {
   private constructor(
     readonly manifest: Manifest,
     readonly fileObjects: Map<string, File>,
-    readonly directories: Map<string, string[]>,
   ) {
     super();
     this.files = Array.from(fileObjects.keys());
@@ -21,18 +20,13 @@ export class FileSystemPackage extends Package {
     directoryHandle: FileSystemDirectoryHandle,
   ): Promise<FileSystemPackage> {
     const fileObjects = new Map<string, File>();
-    const directories = new Map<string, string[]>();
-
     async function readDirectory(
       directory: string,
       directoryHandle: FileSystemDirectoryHandle,
     ) {
-      const directoryChildren: string[] = [];
-      directories.set(directory, directoryChildren);
       for await (const handle of directoryHandle.values()) {
         const file =
           directory !== '.' ? `${directory}/${handle.name}` : handle.name;
-        directoryChildren.push(file);
         switch (handle.kind) {
           case 'directory':
             await readDirectory(file, handle as FileSystemDirectoryHandle);
@@ -46,7 +40,6 @@ export class FileSystemPackage extends Package {
         }
       }
     }
-
     await readDirectory('.', directoryHandle);
 
     const manifestFile = fileObjects.get(MANIFEST_FILE);
@@ -56,6 +49,6 @@ export class FileSystemPackage extends Package {
     const manifestText = await manifestFile.text();
     const manifest = Manifest.parse(manifestText);
 
-    return new FileSystemPackage(manifest, fileObjects, directories);
+    return new FileSystemPackage(manifest, fileObjects);
   }
 }

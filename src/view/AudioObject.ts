@@ -1,22 +1,62 @@
 import { Howl } from 'howler';
 
+import { RevocableUrl } from '../package';
 import { AudioElementResolvedProperties } from './ElementResolvedProperties';
 import { ViewError } from './View';
 
-export class AudioObject {
-  public howl!: Howl;
+export interface AudioObject {
+  readonly url: RevocableUrl;
+
+  load(url: RevocableUrl): Promise<void>;
+
+  destroy(): void;
+
+  attach(): void;
+
+  detach(): void;
+
+  readonly isPlaying: boolean;
+
+  createPlaybackPromise(): Promise<void>;
+
+  snapPlayback(): void;
+
+  valueVolume: number;
+
+  propertyVolume: number;
+
+  loop: boolean;
+
+  getPropertyValue(
+    propertyName: keyof AudioElementResolvedProperties,
+  ): AudioElementResolvedProperties[typeof propertyName];
+
+  setPropertyValue(
+    propertyName: keyof AudioElementResolvedProperties,
+    propertyValue: AudioElementResolvedProperties[typeof propertyName],
+  ): void;
+}
+
+export class DOMAudioObject implements AudioObject {
+  private _url!: RevocableUrl;
+  private howl!: Howl;
 
   private _valueVolume = 1;
   private _propertyVolume = 1;
   private _volume = 1;
   private _loop = false;
 
-  load(url: string): Promise<void> {
-    if (this.howl) {
+  get url(): RevocableUrl {
+    return this._url;
+  }
+
+  load(url: RevocableUrl): Promise<void> {
+    if (this._url) {
       throw new ViewError('Cannot reload an audio object');
     }
+    this._url = url;
     const howl = new Howl({
-      src: url,
+      src: url.value,
       // The format here is only needed to workaround Howl.
       format: 'mp3',
       preload: false,
@@ -35,6 +75,47 @@ export class AudioObject {
     this.howl = howl;
     howl.load();
     return promise;
+  }
+
+  destroy() {
+    this.howl.unload();
+  }
+
+  attach() {
+    this.howl.play();
+  }
+
+  detach() {
+    this.howl.stop();
+  }
+
+  get isPlaying(): boolean {
+    return this.howl.playing();
+  }
+
+  createPlaybackPromise(): Promise<void> {
+    if (this.howl.loop() || !this.howl.playing()) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+      this.howl
+        .once('stop', () => {
+          this.howl.off('playerror').off('end');
+          resolve();
+        })
+        .once('end', () => {
+          this.howl.off('playerror').off('stop');
+          resolve();
+        })
+        .once('playerror', (_, error) => {
+          this.howl.off('end').off('stop');
+          reject(error);
+        });
+    });
+  }
+
+  snapPlayback() {
+    this.howl.stop();
   }
 
   get valueVolume(): number {
@@ -90,7 +171,7 @@ export class AudioObject {
       case 'volume':
         return this.propertyVolume;
       case 'loop':
-        return this.howl.loop();
+        return this.loop;
       default:
         throw new ViewError(`Unknown property "${propertyName}"`);
     }
@@ -116,27 +197,5 @@ export class AudioObject {
       default:
         throw new ViewError(`Unknown property "${propertyName}"`);
     }
-  }
-
-  createPlaybackPromise(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.howl.loop() || !this.howl.playing()) {
-        resolve();
-        return;
-      }
-      this.howl
-        .once('stop', () => {
-          this.howl.off('playerror').off('end');
-          resolve();
-        })
-        .once('end', () => {
-          this.howl.off('playerror').off('stop');
-          resolve();
-        })
-        .once('playerror', (_, error) => {
-          this.howl.off('end').off('stop');
-          reject(error);
-        });
-    });
   }
 }

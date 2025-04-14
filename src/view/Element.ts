@@ -13,9 +13,10 @@ import {
 import { Package } from '../package';
 import { CssEasings, Easing, LinearEasing, Transition } from '../transition';
 import { HTMLElements } from '../util';
-import { AudioObject } from './AudioObject';
+import { AudioObject, DOMAudioObject } from './AudioObject';
 import { ChoiceObject } from './ChoiceObject';
-import { EffectObject } from './EffectObjects';
+import { Clock } from './Clock';
+import { EffectObject } from './EffectObject';
 import {
   AudioElementResolvedProperties,
   ChoiceElementResolvedProperties,
@@ -29,8 +30,7 @@ import {
 } from './ElementResolvedProperties';
 import { ImageObject } from './ImageObject';
 import { TextObject } from './TextObject';
-import { Ticker } from './Ticker';
-import { VideoObject } from './VideoObject';
+import { DOMVideoObject, VideoObject } from './VideoObject';
 import { ViewError } from './View';
 
 export interface Element<Properties extends ElementProperties, Options> {
@@ -71,7 +71,7 @@ export abstract class BaseElement<
   >();
 
   protected constructor(
-    protected readonly ticker: Ticker,
+    protected readonly clock: Clock,
     protected readonly crossFade: boolean,
   ) {}
 
@@ -289,7 +289,7 @@ export abstract class BaseElement<
       .addOnEndCallback(() => {
         this.objectTransitions.remove(object, transition);
         this.propertyTransitions.remove(propertyName, transition);
-        this.ticker.removeCallback(transition);
+        this.clock.removeFrameCallback(transition);
         if (propertyName === 'value' && propertyValue === 0) {
           const transitions = this.objectTransitions.get(object);
           if (transitions) {
@@ -302,7 +302,7 @@ export abstract class BaseElement<
       });
     this.objectTransitions.set(object, transition);
     this.propertyTransitions.set(propertyName, transition);
-    this.ticker.addCallback(transition, it => transition.update(it));
+    this.clock.addFrameCallback(transition, it => transition.update(it));
     transition.start();
   }
 
@@ -371,9 +371,9 @@ export class ImageElement extends BaseElement<
     private readonly package_: Package,
     container: HTMLElement,
     index: number,
-    ticker: Ticker,
+    clock: Clock,
   ) {
-    super(ticker, true);
+    super(clock, true);
 
     const layer = document.createElement('div');
     layer.style.position = 'absolute';
@@ -410,20 +410,19 @@ export class ImageElement extends BaseElement<
     type: string,
     value: string,
   ): Promise<ImageObject> {
-    const blob = await this.package_.getBlob(type, value);
-    const blobUrl = URL.createObjectURL(blob);
+    const url = await this.package_.getUrl(type, value);
     try {
       const image = new ImageObject(this.package_.manifest.density);
-      await image.load(blobUrl);
+      await image.load(url);
       return image;
     } catch (e) {
-      URL.revokeObjectURL(blobUrl);
+      url.revoke();
       throw e;
     }
   }
 
   protected destroyObject(object: ImageObject) {
-    URL.revokeObjectURL(object.element.src);
+    object.url.revoke();
   }
 
   protected attachObject(object: ImageObject) {
@@ -466,10 +465,10 @@ export class TextElement extends BaseElement<
     private readonly package_: Package,
     private readonly container: HTMLElement,
     private readonly index: number,
-    ticker: Ticker,
+    clock: Clock,
     private readonly enterByGraphemeCluster: boolean,
   ) {
-    super(ticker, false);
+    super(clock, false);
   }
 
   protected resolveProperties(
@@ -539,10 +538,23 @@ export class ChoiceElement extends BaseElement<
     private readonly container: HTMLElement,
     private readonly index: number,
     private readonly template: HTMLElement,
-    private readonly onClick: (script: string) => void,
-    ticker: Ticker,
+    clock: Clock,
   ) {
-    super(ticker, false);
+    super(clock, false);
+  }
+
+  getScript(): string {
+    return this.object?.script ?? '';
+  }
+
+  setOnSelect(onSelect: (() => boolean) | undefined) {
+    if (this.object) {
+      this.object.onSelect = onSelect;
+    }
+  }
+
+  select() {
+    this.object?.element.click();
   }
 
   protected resolveProperties(
@@ -560,7 +572,7 @@ export class ChoiceElement extends BaseElement<
     _type: string,
     value: string,
   ): Promise<ChoiceObject> {
-    return new ChoiceObject(this.template, value, this.onClick);
+    return new ChoiceObject(this.template, value);
   }
 
   protected destroyObject(_object: ChoiceObject) {}
@@ -597,9 +609,10 @@ export class AudioElement extends BaseElement<
 > {
   constructor(
     private readonly package_: Package,
-    ticker: Ticker,
+    clock: Clock,
+    private readonly newObject: () => AudioObject = () => new DOMAudioObject(),
   ) {
-    super(ticker, true);
+    super(clock, true);
   }
 
   protected resolveProperties(
@@ -617,27 +630,28 @@ export class AudioElement extends BaseElement<
     type: string,
     value: string,
   ): Promise<AudioObject> {
-    const blob = await this.package_.getBlob(type, value);
-    const blobUrl = URL.createObjectURL(blob);
+    const url = await this.package_.getUrl(type, value);
     try {
-      const audio = new AudioObject();
-      await audio.load(blobUrl);
+      const audio = this.newObject();
+      await audio.load(url);
       return audio;
-    } finally {
-      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      url.revoke();
+      throw e;
     }
   }
 
   protected destroyObject(object: AudioObject) {
-    object.howl.unload();
+    object.destroy();
+    object.url.revoke();
   }
 
   protected attachObject(object: AudioObject) {
-    object.howl.play();
+    object.attach();
   }
 
   protected detachObject(object: AudioObject) {
-    object.howl.stop();
+    object.detach();
   }
 
   protected getPropertyValue(
@@ -661,8 +675,8 @@ export class AudioElement extends BaseElement<
     }
 
     const object = this.object;
-    if (propertyMatcher.match('playback') && object) {
-      return object.howl.playing();
+    if (propertyMatcher.match('playback') && object && !object.loop) {
+      return object.isPlaying;
     }
     return false;
   }
@@ -671,7 +685,7 @@ export class AudioElement extends BaseElement<
     const superPromise = super.wait(propertyMatcher);
 
     const object = this.object;
-    if (propertyMatcher.match('playback') && object) {
+    if (propertyMatcher.match('playback') && object && !object.loop) {
       const playbackPromise = object.createPlaybackPromise();
       return Promise.all([superPromise, playbackPromise]).then(() => {});
     } else {
@@ -681,10 +695,8 @@ export class AudioElement extends BaseElement<
 
   snap(propertyMatcher: Matcher) {
     const object = this.object;
-    if (propertyMatcher.match('playback') && object) {
-      if (!object.loop) {
-        object.howl.stop();
-      }
+    if (propertyMatcher.match('playback') && object && !object.loop) {
+      object.snapPlayback();
     }
 
     super.snap(propertyMatcher);
@@ -701,9 +713,10 @@ export class VideoElement extends BaseElement<
     private readonly package_: Package,
     private readonly container: HTMLElement,
     private readonly index: number,
-    ticker: Ticker,
+    clock: Clock,
+    private readonly newObject: () => VideoObject = () => new DOMVideoObject(),
   ) {
-    super(ticker, true);
+    super(clock, true);
   }
 
   protected resolveProperties(
@@ -721,31 +734,28 @@ export class VideoElement extends BaseElement<
     type: string,
     value: string,
   ): Promise<VideoObject> {
-    const blob = await this.package_.getBlob(type, value);
-    const blobUrl = URL.createObjectURL(blob);
+    const url = await this.package_.getUrl(type, value);
     try {
-      const video = new VideoObject();
-      await video.load(blobUrl);
+      const video = this.newObject();
+      await video.load(url);
       return video;
     } catch (e) {
-      URL.revokeObjectURL(blobUrl);
+      url.revoke();
       throw e;
     }
   }
 
   protected destroyObject(object: VideoObject) {
-    URL.revokeObjectURL(object.element.src);
+    object.destroy();
+    object.url.revoke();
   }
 
   protected attachObject(object: VideoObject) {
-    HTMLElements.insertWithOrder(this.container, this.index, object.element);
-    // noinspection JSIgnoredPromiseFromCall
-    object.element.play();
+    object.attach(this.container, this.index);
   }
 
   protected detachObject(object: VideoObject) {
-    object.element.pause();
-    object.element.remove();
+    object.detach();
   }
 
   protected getPropertyValue(
@@ -769,8 +779,8 @@ export class VideoElement extends BaseElement<
     }
 
     const object = this.object;
-    if (propertyMatcher.match('playback') && object) {
-      return !object.element.paused;
+    if (propertyMatcher.match('playback') && object && !object.loop) {
+      return object.isPlaying;
     }
     return false;
   }
@@ -779,7 +789,7 @@ export class VideoElement extends BaseElement<
     const superPromise = super.wait(propertyMatcher);
 
     const object = this.object;
-    if (object && propertyMatcher.match('playback')) {
+    if (propertyMatcher.match('playback') && object && !object.loop) {
       const playbackPromise = object.createPlaybackPromise();
       return Promise.all([superPromise, playbackPromise]).then(() => {});
     } else {
@@ -789,10 +799,8 @@ export class VideoElement extends BaseElement<
 
   snap(propertyMatcher: Matcher) {
     const object = this.object;
-    if (object && propertyMatcher.match('playback')) {
-      if (!object.loop) {
-        object.element.pause();
-      }
+    if (propertyMatcher.match('playback') && object && !object.loop) {
+      object.snapPlayback();
     }
 
     super.snap(propertyMatcher);
@@ -809,9 +817,9 @@ export class EffectElement extends BaseElement<
     private readonly effectElement: HTMLElement,
     private readonly effectOverlayElement: HTMLElement,
     private readonly index: number,
-    ticker: Ticker,
+    clock: Clock,
   ) {
-    super(ticker, false);
+    super(clock, false);
   }
 
   protected resolveProperties(

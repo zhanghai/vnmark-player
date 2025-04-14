@@ -6,6 +6,11 @@ export class PackageError extends Error {
   }
 }
 
+export interface RevocableUrl {
+  value: string;
+  revoke: () => void;
+}
+
 export abstract class Package {
   abstract readonly manifest: Manifest;
 
@@ -33,5 +38,37 @@ export abstract class Package {
       throw new PackageError(`Cannot find file with names "${names}"`);
     }
     return blob;
+  }
+
+  protected async getUrlForFile(
+    file: string,
+  ): Promise<RevocableUrl | undefined> {
+    const blob = await this.getBlobForFile(file);
+    if (!blob) {
+      return undefined;
+    }
+    const objectUrl = URL.createObjectURL(blob);
+    return { value: objectUrl, revoke: () => URL.revokeObjectURL(objectUrl) };
+  }
+
+  async getUrlOrNull(...names: string[]): Promise<RevocableUrl | undefined> {
+    const file = names.join('/');
+    if (file in this.files) {
+      return this.getUrlForFile(file);
+    } else {
+      const exactFile = this.files.find(it => it.startsWith(`${file}.`));
+      if (exactFile) {
+        return this.getUrlForFile(exactFile);
+      }
+    }
+    return undefined;
+  }
+
+  async getUrl(...names: string[]): Promise<RevocableUrl> {
+    const url = await this.getUrlOrNull(...names);
+    if (!url) {
+      throw new PackageError(`Cannot find file with names "${names}"`);
+    }
+    return url;
   }
 }

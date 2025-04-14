@@ -1,7 +1,7 @@
 import { ELEMENT_TYPES, ElementType } from '../engine';
 import { Transition } from '../transition';
 import { Arrays2, HTMLElements, Maps } from '../util';
-import { Ticker } from './Ticker';
+import { Clock } from './Clock';
 import { ViewError } from './View';
 
 const LAYOUT_TRANSITION_DURATION = 500;
@@ -28,7 +28,7 @@ export class Layout {
 
   constructor(
     rootElement: HTMLElement,
-    private readonly ticker: Ticker,
+    private readonly clock: Clock,
   ) {
     const layoutNameSet = new Set(['none']);
     this.elementLayouts = new Map();
@@ -209,10 +209,10 @@ export class Layout {
       .addOnUpdateCallback(it => HTMLElements.setOpacity(element, it))
       .addOnEndCallback(() => {
         Arrays2.remove(this.transitions, transition);
-        this.ticker.removeCallback(transition);
+        this.clock.removeFrameCallback(transition);
       });
     this.transitions.push(transition);
-    this.ticker.addCallback(transition, it => transition.update(it));
+    this.clock.addFrameCallback(transition, it => transition.update(it));
     transition.start();
   }
 

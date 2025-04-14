@@ -8,23 +8,22 @@ export class ChoiceObject {
   readonly element: HTMLButtonElement;
   private readonly hoverAudioElement: HTMLAudioElement | undefined;
 
+  onSelect: (() => boolean) | undefined;
+
   private _value = 1;
   private _enabled = true;
-  public script = '';
+  script = '';
   private _visited = false;
   private _selected = false;
 
-  constructor(
-    template: HTMLElement,
-    text: string,
-    onClick: (script: string) => void,
-  ) {
+  constructor(template: HTMLElement, text: string) {
     this.element = template.cloneNode(true) as HTMLButtonElement;
     this.element.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
-      this.selected = true;
-      onClick(this.script);
+      if (this.onSelect?.()) {
+        this.selected = true;
+      }
     });
     this.hoverAudioElement = HTMLElements.firstDescendantOrUndefined(
       this.element,

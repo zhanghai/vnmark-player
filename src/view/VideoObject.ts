@@ -1,9 +1,46 @@
+import { RevocableUrl } from '../package';
 import { HTMLElements } from '../util';
 import { VideoElementResolvedProperties } from './ElementResolvedProperties';
 import { ViewError } from './View';
 
-export class VideoObject {
-  readonly element: HTMLVideoElement;
+export interface VideoObject {
+  readonly url: RevocableUrl;
+
+  load(url: RevocableUrl): Promise<void>;
+
+  destroy(): void;
+
+  attach(parentElement: HTMLElement, order: number): void;
+
+  detach(): void;
+
+  readonly isPlaying: boolean;
+
+  createPlaybackPromise(): Promise<void>;
+
+  snapPlayback(): void;
+
+  value: number;
+
+  propertyAlpha: number;
+
+  propertyVolume: number;
+
+  loop: boolean;
+
+  getPropertyValue(
+    propertyName: keyof VideoElementResolvedProperties,
+  ): VideoElementResolvedProperties[typeof propertyName];
+
+  setPropertyValue(
+    propertyName: keyof VideoElementResolvedProperties,
+    propertyValue: VideoElementResolvedProperties[typeof propertyName],
+  ): void;
+}
+
+export class DOMVideoObject implements VideoObject {
+  private _url!: RevocableUrl;
+  private readonly element: HTMLVideoElement;
 
   private _value = 1;
   private _propertyAlpha = 1;
@@ -17,10 +54,15 @@ export class VideoObject {
     this.element.style.objectFit = 'contain';
   }
 
-  load(url: string): Promise<void> {
-    if (this.element.src) {
+  get url(): RevocableUrl {
+    return this._url;
+  }
+
+  load(url: RevocableUrl): Promise<void> {
+    if (this._url) {
       throw new ViewError('Cannot reload a video object');
     }
+    this._url = url;
     return new Promise((resolve, reject) => {
       const abortController = new AbortController();
       const signal = abortController.signal;
@@ -40,8 +82,56 @@ export class VideoObject {
         },
         { signal },
       );
-      this.element.src = url;
+      this.element.src = url.value;
     });
+  }
+
+  destroy() {}
+
+  attach(parentElement: HTMLElement, order: number) {
+    HTMLElements.insertWithOrder(parentElement, order, this.element);
+    // noinspection JSIgnoredPromiseFromCall
+    this.element.play();
+  }
+
+  detach() {
+    this.element.pause();
+    this.element.remove();
+  }
+
+  get isPlaying(): boolean {
+    return !this.element.paused;
+  }
+
+  createPlaybackPromise(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.element.loop || this.element.ended) {
+        resolve();
+        return;
+      }
+      const abortController = new AbortController();
+      const signal = abortController.signal;
+      this.element.addEventListener(
+        'ended',
+        () => {
+          abortController.abort();
+          resolve();
+        },
+        { signal },
+      );
+      this.element.addEventListener(
+        'error',
+        event => {
+          abortController.abort();
+          reject(event);
+        },
+        { signal },
+      );
+    });
+  }
+
+  snapPlayback() {
+    this.element.pause();
   }
 
   get value(): number {
@@ -129,32 +219,5 @@ export class VideoObject {
       default:
         throw new ViewError(`Unknown property "${propertyName}"`);
     }
-  }
-
-  createPlaybackPromise(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.element.loop || this.element.ended) {
-        resolve();
-        return;
-      }
-      const abortController = new AbortController();
-      const signal = abortController.signal;
-      this.element.addEventListener(
-        'ended',
-        () => {
-          abortController.abort();
-          resolve();
-        },
-        { signal },
-      );
-      this.element.addEventListener(
-        'error',
-        event => {
-          abortController.abort();
-          reject(event);
-        },
-        { signal },
-      );
-    });
   }
 }

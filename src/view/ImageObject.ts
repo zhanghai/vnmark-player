@@ -1,8 +1,10 @@
+import { RevocableUrl } from '../package';
 import { HTMLElements } from '../util';
 import { ImageElementResolvedProperties } from './ElementResolvedProperties';
 import { ViewError } from './View';
 
 export class ImageObject {
+  private _url!: RevocableUrl;
   readonly element: HTMLImageElement;
 
   private _anchorX = 0;
@@ -33,11 +35,16 @@ export class ImageObject {
     this.updateOpacity();
   }
 
-  async load(url: string) {
-    if (this.element.src) {
+  get url(): RevocableUrl {
+    return this._url;
+  }
+
+  async load(url: RevocableUrl) {
+    if (this._url) {
       throw new ViewError('Cannot reload an image object');
     }
-    this.element.src = url;
+    this._url = url;
+    this.element.src = url.value;
     await this.element.decode();
   }
 

@@ -9,6 +9,8 @@ import {
   UpdateViewOptions,
 } from '../engine';
 import { HTMLElements, Numbers } from '../util';
+import { AudioObject, DOMAudioObject } from './AudioObject';
+import { Clock } from './Clock';
 import {
   AudioElement,
   AvatarElementTransitionOptions,
@@ -22,7 +24,7 @@ import {
 } from './Element';
 import { resolveElementValue } from './ElementResolvedProperties';
 import { Layout } from './Layout';
-import { Ticker } from './Ticker';
+import { DOMVideoObject, VideoObject } from './VideoObject';
 
 export class ViewError extends Error {
   constructor(message?: string, options?: ErrorOptions) {
@@ -30,9 +32,18 @@ export class ViewError extends Error {
   }
 }
 
+export type ViewStatus =
+  | { type: 'ready' }
+  | { type: 'loading'; promise: Promise<void> }
+  | { type: 'paused'; continue: () => void }
+  | { type: 'choice'; select: (index: number) => void }
+  | { type: 'waiting'; skip: () => void };
+
 const CONTINUE_DURATION = 1500;
 
 export class View {
+  private readonly rootElement = document.createElement('div');
+
   private readonly scriptElements: HTMLElement[] = [];
 
   private layout!: Layout;
@@ -41,76 +52,31 @@ export class View {
     Element<ElementProperties, unknown>
   >();
   private readonly typeElementNames = new MultiMap<ElementType, string>();
-  private readonly visualTicker = new Ticker();
-  private readonly auralTicker = new Ticker();
 
-  private onContinue: (() => void) | undefined;
-  private onSkipWait: (() => void) | undefined;
-  private onChoose: ((script: string) => void) | undefined;
+  private _status: ViewStatus = { type: 'ready' };
 
+  isSkipping: boolean = false;
+  isContinuing = false;
   private skippedLastWait: boolean = false;
-  private isSkipping: boolean = false;
-  private isContinuing = false;
 
   constructor(
-    private readonly rootElement: HTMLElement,
+    private readonly parentElement: HTMLElement,
     private readonly engine: Engine,
+    private readonly clock: Clock,
+    private readonly newAudioObject: () => AudioObject = () =>
+      new DOMAudioObject(),
+    private readonly newVideoObject: () => VideoObject = () =>
+      new DOMVideoObject(),
   ) {}
 
   async init() {
-    await this.loadTemplate();
-
-    this.layout = new Layout(this.rootElement, this.visualTicker);
-    this.layout.pointerElement.addEventListener('click', event => {
-      event.preventDefault();
-      event.stopPropagation();
-      this.onClick();
-    });
-    this.layout.pointerElement.addEventListener('wheel', event => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.deltaY > 0) {
-        this.onClick();
-      }
-    });
-    document.addEventListener('keydown', event => {
-      if (
-        event.key === 'Enter' &&
-        !event.metaKey &&
-        !event.ctrlKey &&
-        !event.altKey &&
-        !event.shiftKey &&
-        !event.repeat &&
-        !event.isComposing
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-        this.onClick();
-      } else if (
-        event.key === 'Control' &&
-        !event.metaKey &&
-        !event.altKey &&
-        !event.shiftKey &&
-        !event.isComposing
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-        this.isSkipping = true;
-        this.onClick();
-      }
-    });
-    document.addEventListener('keyup', event => {
-      if (event.key === 'Control') {
-        event.preventDefault();
-        event.stopPropagation();
-        this.isSkipping = false;
-      }
-    });
-
-    this.visualTicker.start();
-    this.auralTicker.start();
-
-    this.engine.viewUpdater = options => this.update(options);
+    const manifest_ = this.engine.package_.manifest;
+    this.rootElement.style.width = `${manifest_.width * manifest_.density}px`;
+    this.rootElement.style.height = `${manifest_.height * manifest_.density}px`;
+    await this.loadWithStatus(this.loadTemplate());
+    this.layout = new Layout(this.rootElement, this.clock);
+    this.parentElement.appendChild(this.rootElement);
+    this.engine.onUpdateView = options => this.update(options);
   }
 
   private async loadTemplate() {
@@ -166,42 +132,12 @@ export class View {
     this.rootElement.appendChild(fragment);
   }
 
-  private onClick() {
-    if (this.onContinue) {
-      this.onContinue();
-      this.onContinue = undefined;
-    } else if (this.onSkipWait) {
-      this.skippedLastWait = true;
-      this.onSkipWait();
-      this.onSkipWait = undefined;
-    }
+  get pointerElement(): HTMLElement {
+    return this.layout.pointerElement;
   }
 
-  private onChoiceClick(script: string) {
-    if (this.onChoose) {
-      this.onChoose(script);
-      this.onChoose = undefined;
-    }
-  }
-
-  private waitOrSkip(
-    promise: Promise<void>,
-    keepSkipping: boolean = false,
-  ): Promise<void> {
-    if (
-      this.isSkipping ||
-      (this.skippedLastWait &&
-        (keepSkipping || this.engine.state.keepSkippingWait))
-    ) {
-      return Promise.resolve();
-    }
-    this.skippedLastWait = false;
-    return Promise.race([
-      promise,
-      new Promise<void>(resolve => {
-        this.onSkipWait = resolve;
-      }),
-    ]);
+  get status(): ViewStatus {
+    return this._status;
   }
 
   async update(options: UpdateViewOptions): Promise<boolean> {
@@ -258,7 +194,7 @@ export class View {
                 this.engine.package_,
                 containerElement,
                 elementProperties.index,
-                this.visualTicker,
+                this.clock,
                 elementType === 'text',
               );
             }
@@ -273,8 +209,7 @@ export class View {
                 containerElement,
                 elementProperties.index,
                 templateElement,
-                it => this.onChoiceClick(it),
-                this.visualTicker,
+                this.clock,
               );
             }
             break;
@@ -287,14 +222,18 @@ export class View {
                 this.engine.package_,
                 containerElement,
                 elementProperties.index,
-                this.visualTicker,
+                this.clock,
               );
             }
             break;
           case 'music':
           case 'sound':
           case 'voice':
-            element = new AudioElement(this.engine.package_, this.auralTicker);
+            element = new AudioElement(
+              this.engine.package_,
+              this.clock,
+              this.newAudioObject,
+            );
             break;
           case 'video':
             if (containerElement) {
@@ -302,7 +241,8 @@ export class View {
                 this.engine.package_,
                 containerElement,
                 elementProperties.index,
-                this.visualTicker,
+                this.clock,
+                this.newVideoObject,
               );
             }
             break;
@@ -311,7 +251,7 @@ export class View {
               this.layout.effectElement,
               this.layout.effectOverlayElement,
               elementProperties.index,
-              this.visualTicker,
+              this.clock,
             );
             break;
         }
@@ -354,17 +294,17 @@ export class View {
       );
     }
 
-    const elementTransitionPromises = elementTransitionGenerators.map(
+    const loadElementPromises = elementTransitionGenerators.map(
       it => it.next().value,
     );
-    elementTransitionPromises.forEach(it => {
+    loadElementPromises.forEach(it => {
       if (!(it instanceof Promise)) {
         throw new ViewError(
           "Element transition didn't yield a promise for the first call to next()",
         );
       }
     });
-    await Promise.all(elementTransitionPromises);
+    await this.loadWithStatus(Promise.all(loadElementPromises));
     elementTransitionGenerators.forEach(it => {
       if (!it.next().done) {
         throw new ViewError(
@@ -390,40 +330,76 @@ export class View {
 
     switch (options.type) {
       case 'pause': {
-        const hasChoice = Object.values(elementPropertiesMap).some(
-          it => it.type === 'choice' && resolveElementValue(it),
-        );
-        if (hasChoice) {
+        const choiceElements = Object.entries(elementPropertiesMap)
+          .filter(
+            ([_, elementProperties]) =>
+              elementProperties.type === 'choice' &&
+              resolveElementValue(elementProperties),
+          )
+          .map(
+            ([elementName]) => this.elements.get(elementName) as ChoiceElement,
+          );
+        if (choiceElements.length) {
           return new Promise<void>(resolve => {
-            this.onChoose = script => {
-              this.engine.evaluateScript(script);
-              resolve();
+            for (const choiceElement of choiceElements) {
+              choiceElement.setOnSelect(() => {
+                if (this._status.type !== 'choice') {
+                  return false;
+                }
+                this._status = { type: 'ready' };
+                this.engine.evaluateScript(choiceElement.getScript());
+                resolve();
+                return true;
+              });
+            }
+            this._status = {
+              type: 'choice',
+              select: index => choiceElements[index].select(),
             };
           }).then(() => true);
         } else {
           if (this.isSkipping) {
             return true;
           }
-          return new Promise<void>(resolve => {
-            if (this.isContinuing) {
-              const voiceElements =
-                this.typeElementNames
-                  .get('voice')
-                  ?.map(it => this.elements.get(it)!) ?? [];
-              const hasVoiceTransition = voiceElements.some(it =>
-                it.hasTransition(Matcher.Any),
-              );
-              if (hasVoiceTransition) {
-                Promise.all(voiceElements.map(it => it.wait(Matcher.Any))).then(
-                  () => resolve(),
+          return Promise.resolve()
+            .then(() => {
+              if (this.isContinuing) {
+                return this.waitOrSkip(
+                  new Promise<void>(resolve => {
+                    const voiceElements =
+                      this.typeElementNames
+                        .get('voice')
+                        ?.map(it => this.elements.get(it)!) ?? [];
+                    const hasVoiceTransition = voiceElements.some(it =>
+                      it.hasTransition(Matcher.Any),
+                    );
+                    if (hasVoiceTransition) {
+                      Promise.all(
+                        voiceElements.map(it => it.wait(Matcher.Any)),
+                      ).then(() => resolve());
+                    } else {
+                      this.clock.addTimeoutCallback(CONTINUE_DURATION, () =>
+                        resolve(),
+                      );
+                    }
+                  }),
                 );
-              } else {
-                setTimeout(resolve, CONTINUE_DURATION);
               }
-            } else {
-              this.onContinue = resolve;
-            }
-          }).then(() => true);
+            })
+            .then(() => {
+              if (!(this.isSkipping || this.isContinuing)) {
+                return new Promise<void>(resolve => {
+                  this._status = {
+                    type: 'paused',
+                    continue: () => {
+                      this._status = { type: 'ready' };
+                      resolve();
+                    },
+                  };
+                });
+              }
+            })
+            .then(() => true);
         }
       }
       case 'set_layout': {
@@ -455,9 +431,7 @@ export class View {
       }
       case 'delay': {
         return this.waitOrSkip(
-          new Promise<void>(resolve =>
-            setTimeout(() => resolve(), options.durationMillis),
-          ),
+          this.clock.createTimeoutPromise(options.durationMillis),
         ).then(() => true);
       }
       case 'snap':
@@ -483,10 +457,42 @@ export class View {
     }
   }
 
-  destroy() {
-    this.visualTicker.stop();
-    this.auralTicker.stop();
+  private async loadWithStatus<T>(promise: Promise<T>): Promise<T> {
+    this._status = { type: 'loading', promise: promise.then(() => {}) };
+    const result = await promise;
+    this._status = { type: 'ready' };
+    return result;
+  }
 
-    this.rootElement.innerHTML = '';
+  private waitOrSkip(
+    promise: Promise<void>,
+    keepSkipping: boolean = false,
+  ): Promise<void> {
+    if (
+      this.isSkipping ||
+      (this.skippedLastWait &&
+        (keepSkipping || this.engine.state.keepSkippingWait))
+    ) {
+      return Promise.resolve();
+    }
+    this.skippedLastWait = false;
+    return Promise.race([
+      promise,
+      new Promise<void>(resolve => {
+        this._status = {
+          type: 'waiting',
+          skip: () => {
+            this._status = { type: 'ready' };
+            this.skippedLastWait = true;
+            resolve();
+          },
+        };
+      }),
+    ]);
+  }
+
+  destroy() {
+    this.elements.forEach(it => it.destroy());
+    this.rootElement.remove();
   }
 }
