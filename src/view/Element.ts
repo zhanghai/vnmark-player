@@ -412,9 +412,9 @@ export class ImageElement extends BaseElement<
   ): Promise<ImageObject> {
     const url = await this.package_.getUrl(type, value);
     try {
-      const image = new ImageObject(this.package_.manifest.density);
-      await image.load(url);
-      return image;
+      const object = new ImageObject(this.package_.manifest.density);
+      await object.load(url);
+      return object;
     } catch (e) {
       url.revoke();
       throw e;
@@ -632,9 +632,9 @@ export class AudioElement extends BaseElement<
   ): Promise<AudioObject> {
     const url = await this.package_.getUrl(type, value);
     try {
-      const audio = this.newObject();
-      await audio.load(url);
-      return audio;
+      const object = this.newObject();
+      await object.load(url);
+      return object;
     } catch (e) {
       url.revoke();
       throw e;
@@ -736,9 +736,9 @@ export class VideoElement extends BaseElement<
   ): Promise<VideoObject> {
     const url = await this.package_.getUrl(type, value);
     try {
-      const video = this.newObject();
-      await video.load(url);
-      return video;
+      const object = this.newObject();
+      await object.load(url);
+      return object;
     } catch (e) {
       url.revoke();
       throw e;
@@ -837,12 +837,14 @@ export class EffectElement extends BaseElement<
     _type: string,
     value: string,
   ): Promise<EffectObject> {
-    return EffectObject.create(
+    const object = EffectObject.create(
       value,
       this.effectElement,
       this.effectOverlayElement,
       this.index,
     );
+    await object.load();
+    return object;
   }
 
   protected destroyObject(_object: EffectObject) {}

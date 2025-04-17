@@ -11,6 +11,8 @@ export abstract class EffectObject {
     protected readonly index: number,
   ) {}
 
+  async load() {}
+
   attach() {}
 
   detach() {}
@@ -84,6 +86,17 @@ export class CrossFadeEffectObject extends EffectObject {
     super(effectElement, effectOverlayElement, index);
 
     this.element = effectElement.cloneNode(true) as HTMLElement;
+  }
+
+  async load() {
+    const promises: Promise<void>[] = [];
+    HTMLElements.forEachDescendant(this.element, element => {
+      if (element instanceof HTMLImageElement) {
+        promises.push(element.decode());
+      }
+      return true;
+    });
+    await Promise.all(promises);
   }
 
   attach() {
