@@ -39,8 +39,8 @@ export interface VideoObject {
 }
 
 export class DOMVideoObject implements VideoObject {
-  private _url!: RevocableUrl;
   private readonly element: HTMLVideoElement;
+  private _url!: RevocableUrl;
 
   private _value = 1;
   private _propertyAlpha = 1;

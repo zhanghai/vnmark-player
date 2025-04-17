@@ -395,8 +395,8 @@ export class ImageElement extends BaseElement<
       valueChanged,
       screenWidth: manifest.width,
       screenHeight: manifest.height,
-      imageWidth: object.element.naturalWidth / manifest.density,
-      imageHeight: object.element.naturalHeight / manifest.density,
+      imageWidth: object.naturalWidth / manifest.density,
+      imageHeight: object.naturalHeight / manifest.density,
       figureIndex: (options as FigureElementTransitionOptions)?.figureIndex,
       figureCount: (options as FigureElementTransitionOptions)?.figureCount,
       avatarPositionX: (options as AvatarElementTransitionOptions)
@@ -426,11 +426,11 @@ export class ImageElement extends BaseElement<
   }
 
   protected attachObject(object: ImageObject) {
-    this.layer.appendChild(object.element);
+    object.attach(this.layer);
   }
 
   protected detachObject(object: ImageObject) {
-    object.element.remove();
+    object.detach();
   }
 
   protected getPropertyValue(
@@ -494,11 +494,11 @@ export class TextElement extends BaseElement<
   protected destroyObject(_object: TextObject) {}
 
   protected attachObject(object: TextObject) {
-    HTMLElements.insertWithOrder(this.container, this.index, object.element);
+    object.attach(this.container, this.index);
   }
 
   protected detachObject(object: TextObject) {
-    object.element.remove();
+    object.detach();
   }
 
   protected getTransitionElementCount(

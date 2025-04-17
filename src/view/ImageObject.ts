@@ -4,8 +4,8 @@ import { ImageElementResolvedProperties } from './ElementResolvedProperties';
 import { ViewError } from './View';
 
 export class ImageObject {
+  private readonly element: HTMLImageElement;
   private _url!: RevocableUrl;
-  readonly element: HTMLImageElement;
 
   private _anchorX = 0;
   private _anchorY = 0;
@@ -46,6 +46,22 @@ export class ImageObject {
     this._url = url;
     this.element.src = url.value;
     await this.element.decode();
+  }
+
+  attach(parentElement: HTMLElement) {
+    parentElement.appendChild(this.element);
+  }
+
+  detach() {
+    this.element.remove();
+  }
+
+  get naturalWidth(): number {
+    return this.element.naturalWidth;
+  }
+
+  get naturalHeight(): number {
+    return this.element.naturalHeight;
   }
 
   get anchorX(): number {

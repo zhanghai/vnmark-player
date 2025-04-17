@@ -7,7 +7,7 @@ import { ViewError } from './View';
 const ENTER_TRANSITION_WINDOW_SIZE = 5;
 
 export class TextObject {
-  readonly element: HTMLDivElement;
+  private readonly element: HTMLDivElement;
   private readonly spans: HTMLSpanElement[];
 
   private _value = 1;
@@ -49,6 +49,14 @@ export class TextObject {
     }
     this.element = element;
     this.spans = spans;
+  }
+
+  attach(parentElement: HTMLElement, order: number) {
+    HTMLElements.insertWithOrder(parentElement, order, this.element);
+  }
+
+  detach() {
+    this.element.remove();
   }
 
   get transitionElementCount(): number {
