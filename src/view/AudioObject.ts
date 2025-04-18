@@ -29,11 +29,11 @@ export interface AudioObject {
 
   getPropertyValue(
     propertyName: keyof AudioElementResolvedProperties,
-  ): AudioElementResolvedProperties[typeof propertyName];
+  ): AudioElementResolvedProperties[keyof AudioElementResolvedProperties];
 
   setPropertyValue(
     propertyName: keyof AudioElementResolvedProperties,
-    propertyValue: AudioElementResolvedProperties[typeof propertyName],
+    propertyValue: AudioElementResolvedProperties[keyof AudioElementResolvedProperties],
   ): void;
 }
 
@@ -164,7 +164,7 @@ export class DOMAudioObject implements AudioObject {
 
   getPropertyValue(
     propertyName: keyof AudioElementResolvedProperties,
-  ): AudioElementResolvedProperties[typeof propertyName] {
+  ): AudioElementResolvedProperties[keyof AudioElementResolvedProperties] {
     switch (propertyName) {
       case 'value':
         return this.valueVolume;
@@ -179,7 +179,7 @@ export class DOMAudioObject implements AudioObject {
 
   setPropertyValue(
     propertyName: keyof AudioElementResolvedProperties,
-    propertyValue: AudioElementResolvedProperties[typeof propertyName],
+    propertyValue: AudioElementResolvedProperties[keyof AudioElementResolvedProperties],
   ) {
     switch (propertyName) {
       case 'value':

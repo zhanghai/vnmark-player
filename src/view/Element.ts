@@ -254,18 +254,18 @@ export abstract class BaseElement<
   protected abstract getPropertyValue(
     object: Object,
     propertyName: keyof ResolvedProperties,
-  ): ResolvedProperties[typeof propertyName];
+  ): ResolvedProperties[keyof ResolvedProperties];
 
   protected abstract setPropertyValue(
     object: Object,
     propertyName: keyof ResolvedProperties,
-    propertyValue: ResolvedProperties[typeof propertyName],
+    propertyValue: ResolvedProperties[keyof ResolvedProperties],
   ): void;
 
   private transitionPropertyValue(
     object: Object,
     propertyName: keyof ResolvedProperties,
-    propertyValue: ResolvedProperties[typeof propertyName],
+    propertyValue: ResolvedProperties[keyof ResolvedProperties],
     transitionDelay: number,
     transitionDuration: number,
     transitionEasing: Easing,
@@ -436,14 +436,14 @@ export class ImageElement extends BaseElement<
   protected getPropertyValue(
     object: ImageObject,
     propertyName: keyof ImageElementResolvedProperties,
-  ): ImageElementResolvedProperties[typeof propertyName] {
+  ): ImageElementResolvedProperties[keyof ImageElementResolvedProperties] {
     return object.getPropertyValue(propertyName);
   }
 
   protected setPropertyValue(
     object: ImageObject,
     propertyName: keyof ImageElementResolvedProperties,
-    propertyValue: ImageElementResolvedProperties[typeof propertyName],
+    propertyValue: ImageElementResolvedProperties[keyof ImageElementResolvedProperties],
   ) {
     object.setPropertyValue(propertyName, propertyValue);
   }
@@ -513,14 +513,14 @@ export class TextElement extends BaseElement<
   protected getPropertyValue(
     object: TextObject,
     propertyName: keyof TextElementResolvedProperties,
-  ): TextElementResolvedProperties[typeof propertyName] {
+  ): TextElementResolvedProperties[keyof TextElementResolvedProperties] {
     return object.getPropertyValue(propertyName);
   }
 
   protected setPropertyValue(
     object: TextObject,
     propertyName: keyof TextElementResolvedProperties,
-    propertyValue: TextElementResolvedProperties[typeof propertyName],
+    propertyValue: TextElementResolvedProperties[keyof TextElementResolvedProperties],
   ) {
     object.setPropertyValue(propertyName, propertyValue);
   }
@@ -588,14 +588,14 @@ export class ChoiceElement extends BaseElement<
   protected getPropertyValue(
     object: ChoiceObject,
     propertyName: keyof ChoiceElementResolvedProperties,
-  ): ChoiceElementResolvedProperties[typeof propertyName] {
+  ): ChoiceElementResolvedProperties[keyof ChoiceElementResolvedProperties] {
     return object.getPropertyValue(propertyName);
   }
 
   protected setPropertyValue(
     object: ChoiceObject,
     propertyName: keyof ChoiceElementResolvedProperties,
-    propertyValue: ChoiceElementResolvedProperties[typeof propertyName],
+    propertyValue: ChoiceElementResolvedProperties[keyof ChoiceElementResolvedProperties],
   ) {
     object.setPropertyValue(propertyName, propertyValue);
   }
@@ -657,14 +657,14 @@ export class AudioElement extends BaseElement<
   protected getPropertyValue(
     object: AudioObject,
     propertyName: keyof AudioElementResolvedProperties,
-  ): AudioElementResolvedProperties[typeof propertyName] {
+  ): AudioElementResolvedProperties[keyof AudioElementResolvedProperties] {
     return object.getPropertyValue(propertyName);
   }
 
   protected setPropertyValue(
     object: AudioObject,
     propertyName: keyof AudioElementResolvedProperties,
-    propertyValue: AudioElementResolvedProperties[typeof propertyName],
+    propertyValue: AudioElementResolvedProperties[keyof AudioElementResolvedProperties],
   ) {
     object.setPropertyValue(propertyName, propertyValue);
   }
@@ -761,14 +761,14 @@ export class VideoElement extends BaseElement<
   protected getPropertyValue(
     object: VideoObject,
     propertyName: keyof VideoElementResolvedProperties,
-  ): VideoElementResolvedProperties[typeof propertyName] {
+  ): VideoElementResolvedProperties[keyof VideoElementResolvedProperties] {
     return object.getPropertyValue(propertyName);
   }
 
   protected setPropertyValue(
     object: VideoObject,
     propertyName: keyof VideoElementResolvedProperties,
-    propertyValue: VideoElementResolvedProperties[typeof propertyName],
+    propertyValue: VideoElementResolvedProperties[keyof VideoElementResolvedProperties],
   ) {
     object.setPropertyValue(propertyName, propertyValue);
   }
@@ -860,14 +860,14 @@ export class EffectElement extends BaseElement<
   protected getPropertyValue(
     object: EffectObject,
     propertyName: keyof EffectElementResolvedProperties,
-  ): EffectElementResolvedProperties[typeof propertyName] {
+  ): EffectElementResolvedProperties[keyof EffectElementResolvedProperties] {
     return object.getPropertyValue(propertyName);
   }
 
   protected setPropertyValue(
     object: EffectObject,
     propertyName: keyof EffectElementResolvedProperties,
-    propertyValue: EffectElementResolvedProperties[typeof propertyName],
+    propertyValue: EffectElementResolvedProperties[keyof EffectElementResolvedProperties],
   ) {
     object.setPropertyValue(propertyName, propertyValue);
   }

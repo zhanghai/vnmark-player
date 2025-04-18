@@ -32,7 +32,7 @@ export abstract class EffectObject {
 
   getPropertyValue(
     propertyName: keyof EffectElementResolvedProperties,
-  ): EffectElementResolvedProperties[typeof propertyName] {
+  ): EffectElementResolvedProperties[keyof EffectElementResolvedProperties] {
     switch (propertyName) {
       case 'value':
         return this.value;
@@ -43,7 +43,7 @@ export abstract class EffectObject {
 
   setPropertyValue(
     propertyName: keyof EffectElementResolvedProperties,
-    propertyValue: EffectElementResolvedProperties[typeof propertyName],
+    propertyValue: EffectElementResolvedProperties[keyof EffectElementResolvedProperties],
   ) {
     switch (propertyName) {
       case 'value':

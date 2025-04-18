@@ -30,11 +30,11 @@ export interface VideoObject {
 
   getPropertyValue(
     propertyName: keyof VideoElementResolvedProperties,
-  ): VideoElementResolvedProperties[typeof propertyName];
+  ): VideoElementResolvedProperties[keyof VideoElementResolvedProperties];
 
   setPropertyValue(
     propertyName: keyof VideoElementResolvedProperties,
-    propertyValue: VideoElementResolvedProperties[typeof propertyName],
+    propertyValue: VideoElementResolvedProperties[keyof VideoElementResolvedProperties],
   ): void;
 }
 
@@ -180,7 +180,7 @@ export class DOMVideoObject implements VideoObject {
 
   getPropertyValue(
     propertyName: keyof VideoElementResolvedProperties,
-  ): VideoElementResolvedProperties[typeof propertyName] {
+  ): VideoElementResolvedProperties[keyof VideoElementResolvedProperties] {
     switch (propertyName) {
       case 'value':
         return this.value;
@@ -197,7 +197,7 @@ export class DOMVideoObject implements VideoObject {
 
   setPropertyValue(
     propertyName: keyof VideoElementResolvedProperties,
-    propertyValue: VideoElementResolvedProperties[typeof propertyName],
+    propertyValue: VideoElementResolvedProperties[keyof VideoElementResolvedProperties],
   ) {
     switch (propertyName) {
       case 'value':

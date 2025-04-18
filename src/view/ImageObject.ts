@@ -226,7 +226,7 @@ export class ImageObject {
 
   getPropertyValue(
     propertyName: keyof ImageElementResolvedProperties,
-  ): ImageElementResolvedProperties[typeof propertyName] {
+  ): ImageElementResolvedProperties[keyof ImageElementResolvedProperties] {
     switch (propertyName) {
       case 'value':
         return this.valueAlpha;
@@ -265,7 +265,7 @@ export class ImageObject {
 
   setPropertyValue(
     propertyName: keyof ImageElementResolvedProperties,
-    propertyValue: ImageElementResolvedProperties[typeof propertyName],
+    propertyValue: ImageElementResolvedProperties[keyof ImageElementResolvedProperties],
   ) {
     switch (propertyName) {
       case 'value':

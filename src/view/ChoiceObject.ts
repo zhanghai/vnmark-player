@@ -86,7 +86,7 @@ export class ChoiceObject {
 
   getPropertyValue(
     propertyName: keyof ChoiceElementResolvedProperties,
-  ): ChoiceElementResolvedProperties[typeof propertyName] {
+  ): ChoiceElementResolvedProperties[keyof ChoiceElementResolvedProperties] {
     switch (propertyName) {
       case 'value':
         return this.value;
@@ -101,7 +101,7 @@ export class ChoiceObject {
 
   setPropertyValue(
     propertyName: keyof ChoiceElementResolvedProperties,
-    propertyValue: ChoiceElementResolvedProperties[typeof propertyName],
+    propertyValue: ChoiceElementResolvedProperties[keyof ChoiceElementResolvedProperties],
   ) {
     switch (propertyName) {
       case 'value':

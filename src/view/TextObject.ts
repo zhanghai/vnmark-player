@@ -105,7 +105,7 @@ export class TextObject {
 
   getPropertyValue(
     propertyName: keyof TextElementResolvedProperties,
-  ): TextElementResolvedProperties[typeof propertyName] {
+  ): TextElementResolvedProperties[keyof TextElementResolvedProperties] {
     switch (propertyName) {
       case 'value':
         return this.value;
@@ -116,7 +116,7 @@ export class TextObject {
 
   setPropertyValue(
     propertyName: keyof TextElementResolvedProperties,
-    propertyValue: TextElementResolvedProperties[typeof propertyName],
+    propertyValue: TextElementResolvedProperties[keyof TextElementResolvedProperties],
   ) {
     switch (propertyName) {
       case 'value':
