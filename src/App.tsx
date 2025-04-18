@@ -1,9 +1,8 @@
 import './App.css';
 
-import { getQuickJS } from 'quickjs-emscripten';
 import { useRef } from 'react';
 
-import { Engine } from './engine';
+import { Engine, getQuickJS } from './engine';
 import { HttpPackage, Package } from './package';
 import { Player } from './player';
 

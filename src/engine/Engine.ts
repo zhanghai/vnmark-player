@@ -24,6 +24,8 @@ import { COMMANDS } from './Command';
 import { ElementProperties } from './ElementProperties';
 import { ElementPropertyMatcher } from './ElementPropertyMatcher';
 
+export { getQuickJS } from 'quickjs-emscripten';
+
 export class EngineError extends Error {
   constructor(message?: string, options?: ErrorOptions) {
     super(message, options);
