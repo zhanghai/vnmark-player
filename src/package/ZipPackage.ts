@@ -1,6 +1,5 @@
 import { BlobReader, Entry, ZipReader } from '@zip.js/zip.js';
 
-import { Maps } from '../util';
 import { Manifest, MANIFEST_FILE } from './Manifest';
 import { Package, PackageError } from './Package';
 
@@ -11,7 +10,6 @@ export class ZipPackage extends Package {
     readonly blob: Blob,
     readonly manifest: Manifest,
     readonly entries: Map<string, Entry>,
-    readonly directories: Map<string, string[]>,
   ) {
     super();
     this.files = Array.from(entries.keys());
@@ -42,8 +40,8 @@ export class ZipPackage extends Package {
         );
       }
     }
+
     const fileToEntries = new Map<string, Entry>();
-    const directories = new Map<string, string[]>();
     for (const entry of entries) {
       const names = entry.filename.split('/').filter(it => it && it !== '.');
       if (names.includes('..')) {
@@ -60,7 +58,6 @@ export class ZipPackage extends Package {
       if (fileToEntries.has(parentDirectory)) {
         throw new PackageError(`Conflicting entry "${entry.filename}"`);
       }
-      Maps.getOrSet(directories, parentDirectory, () => []).push(file);
     }
 
     const manifestBlob = ZipPackage.getBlobForFile(
@@ -74,7 +71,7 @@ export class ZipPackage extends Package {
     const manifestText = await manifestBlob.text();
     const manifest = Manifest.parse(manifestText);
 
-    return new ZipPackage(blob, manifest, fileToEntries, directories);
+    return new ZipPackage(blob, manifest, fileToEntries);
   }
 
   async getBlobForFile(file: string): Promise<Blob | undefined> {
