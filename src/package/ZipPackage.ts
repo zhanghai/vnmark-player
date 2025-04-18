@@ -7,7 +7,7 @@ export class ZipPackage extends Package {
   readonly files: string[];
 
   private constructor(
-    readonly blob: Blob,
+    private readonly blob: Blob,
     readonly manifest: Manifest,
     readonly entries: Map<string, Entry>,
   ) {
