@@ -1,6 +1,6 @@
-# vnmark-viewer
+# vnmark-player
 
-A VNMark document viewer based on Web technologies.
+A VNMark player based on Web technologies.
 
 ## License
 

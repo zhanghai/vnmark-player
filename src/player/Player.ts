@@ -1,5 +1,4 @@
-import { Engine } from '../engine';
-import { DOMClock, View } from '../view';
+import { DOMClock, Engine, View } from 'vnmark-view';
 
 export class Player {
   private readonly clock = new DOMClock();
